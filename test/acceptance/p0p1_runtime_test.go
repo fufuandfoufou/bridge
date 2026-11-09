@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -1207,6 +1208,106 @@ func TestSessionSyncBothDirections(t *testing.T) {
 		}
 		if n != 1 {
 			t.Errorf("appended %d times", n)
+		}
+	})
+}
+
+func preTool(e *env, agent, session, path string) string {
+	in, _ := json.Marshal(map[string]any{"session_id": session, "cwd": e.proj, "tool_name": "Write",
+		"tool_input": map[string]string{"file_path": path, "content": "x"}})
+	return e.run(string(in), "hook", "pre_tool", "--agent", agent).out
+}
+
+func TestLOCK_FileClaims(t *testing.T) {
+	file := func(e *env, n string) string { return filepath.Join(e.proj, n) }
+	t.Run("LOCK-01_warn_allows_and_block_denies", func(t *testing.T) {
+		e := newEnv(t)
+		write(t, filepath.Join(e.proj, ".bridge.toml"), "[live]\nconflict_policy = \"warn\"\n")
+		stop := startDaemon(t, e)
+		defer stop()
+		if out := preTool(e, "claude-code", "A", file(e, "a.go")); out != "" {
+			t.Fatalf("first claim: %s", out)
+		}
+		out := preTool(e, "codex", "B", file(e, "a.go"))
+		if !strings.Contains(out, "additionalContext") || strings.Contains(out, "permissionDecision") {
+			t.Errorf("warn: %s", out)
+		}
+		write(t, filepath.Join(e.proj, ".bridge.toml"), "[live]\nconflict_policy = \"block\"\n")
+		out = preTool(e, "codex", "B", file(e, "a.go"))
+		if !strings.Contains(out, `"permissionDecision":"deny"`) {
+			t.Errorf("block: %s", out)
+		}
+		if out := preTool(e, "claude-code", "A", file(e, "a.go")); strings.Contains(out, "deny") {
+			t.Errorf("owner denied: %s", out)
+		}
+	})
+	t.Run("LOCK-01_concurrent_claims_have_one_winner", func(t *testing.T) {
+		var c live.Claims
+		var mu sync.Mutex
+		var wg sync.WaitGroup
+		winners := 0
+		for i := 0; i < 50; i++ {
+			wg.Add(1)
+			go func(i int) {
+				defer wg.Done()
+				if len(c.TryAcquire("p", "a", fmt.Sprint(i), []string{"/f"}, time.Now())) == 0 {
+					mu.Lock()
+					winners++
+					mu.Unlock()
+				}
+			}(i)
+		}
+		wg.Wait()
+		if winners != 1 {
+			t.Errorf("winners=%d", winners)
+		}
+	})
+	t.Run("LOCK-02_expiry_and_stale_owner", func(t *testing.T) {
+		var c live.Claims
+		start := time.Now()
+		c.TryAcquire("p", "a", "A", []string{"/f"}, start)
+		later := start.Add(live.ClaimTTL + time.Second)
+		if got := c.TryAcquire("p", "b", "B", []string{"/f"}, later); len(got) != 0 {
+			t.Fatalf("expired lease still held: %v", got)
+		}
+		c.Release("a", "A") // the expired owner must not free the new lease
+		if got := c.TryAcquire("p", "c", "C", []string{"/f"}, later); len(got) != 1 || got[0].Session != "B" {
+			t.Errorf("stale owner released it: %v", got)
+		}
+	})
+	t.Run("denied_edit_claims_nothing", func(t *testing.T) {
+		var c live.Claims
+		now := time.Now()
+		c.TryAcquire("p", "a", "A", []string{"/taken"}, now)
+		if got := c.TryAcquire("p", "b", "B", []string{"/free", "/taken"}, now); len(got) != 1 {
+			t.Fatalf("%v", got)
+		}
+		if got := c.TryAcquire("p", "c", "C", []string{"/free"}, now); len(got) != 0 {
+			t.Errorf("denied edit left a claim: %v", got)
+		}
+	})
+	t.Run("survives_daemon_restart", func(t *testing.T) {
+		e := newEnv(t)
+		write(t, filepath.Join(e.proj, ".bridge.toml"), "[live]\nconflict_policy = \"block\"\n")
+		stop := startDaemon(t, e)
+		preTool(e, "claude-code", "A", file(e, "a.go"))
+		stop()
+		stop = startDaemon(t, e)
+		defer stop()
+		if out := preTool(e, "codex", "B", file(e, "a.go")); !strings.Contains(out, "deny") {
+			t.Errorf("claim lost across restart: %q", out)
+		}
+	})
+	t.Run("LOCK-03_shell_is_not_claimed", func(t *testing.T) {
+		in, _ := json.Marshal(map[string]string{"command": "echo x > a.go"})
+		if got := live.EditPaths("Bash", in, "/p", "/p"); len(got) != 0 {
+			t.Errorf("%v", got)
+		}
+	})
+	t.Run("daemon_down_fails_open", func(t *testing.T) {
+		e := newEnv(t)
+		if out := preTool(e, "codex", "B", file(e, "a.go")); out != "" {
+			t.Errorf("%s", out)
 		}
 	})
 }

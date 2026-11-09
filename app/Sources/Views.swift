@@ -67,7 +67,7 @@ struct ClaimsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("检测到文件编辑时自动认领；冲突时提醒但不会阻止编辑。会话结束或 15 分钟无更新后释放。")
+            Text("agent 的编辑工具会自动认领文件，冲突时按设置提醒或拦截。Shell 命令、手工编辑和未接入的 agent 不受保护。")
                 .font(.callout).foregroundStyle(.secondary).padding(12)
             Divider()
             if loading {
@@ -740,6 +740,10 @@ struct SettingsView: View {
             }
             Section("实时协作") {
                 toggle("每次发消息时注入其他 agent 的进展", c.injectOnPrompt, "live.inject_on_prompt")
+                Picker("文件冲突时", selection: Binding(get: { c.conflictPolicy }, set: { set("live.conflict_policy", tomlString($0)) })) {
+                    Text("提醒，仍允许编辑").tag("warn")
+                    Text("拦截编辑").tag("block")
+                }
                 Stepper("注入上限：\(c.injectTokenBudget) tokens", value: Binding(get: { c.injectTokenBudget }, set: { set("live.inject_token_budget", String($0)) }), in: 100...8000, step: 100)
             }
             Section("迁移") {

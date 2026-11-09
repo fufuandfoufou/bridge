@@ -133,7 +133,7 @@ This is an early project. Please try it on sessions you don't depend on first.
 - Migration isn't a byte-for-byte copy: reasoning isn't carried over, unmappable tools become text, and very long sessions are compressed.
 - Appended history takes effect when a session is reopened; a running client won't notice it. Codex has no registry of running threads, so "in use" is inferred from recent file changes.
 - Codex's native paginated sessions can't be appended to yet, only copied into a new session.
-- File claims warn but don't block, are cleared when the daemon restarts, and don't cover shell commands or other unrecognized edits.
+- File claims can warn or block, but only cover the edit tools of connected agents: shell commands and manual edits aren't protected, and nothing is blocked while the daemon is offline.
 - Task board, worktree mode, MCP config sync, and history import aren't implemented.
 - macOS only for now.
 

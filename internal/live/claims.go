@@ -3,18 +3,60 @@ package live
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"bridge/internal/fsutil"
 )
 
-// Claims are advisory turn-scoped leases. They expire after 15 minutes so a
-// crashed client cannot indefinitely claim a file.
+// ClaimTTL is the lease length; every edit renews it, so a crashed client
+// cannot hold a file indefinitely.
+const ClaimTTL = 10 * time.Minute
+
+// Claims are turn-scoped leases. They coordinate participating agents only:
+// manual edits and shell commands are not covered. With Path set, they survive
+// a daemon restart.
 type Claims struct {
 	mu    sync.Mutex
 	files map[string]Claim
+	// Path is the file claims are persisted to; empty keeps them in memory.
+	Path string
+}
+
+// Load restores persisted claims. A missing or damaged file means no claims:
+// leases are advisory state that a later edit re-establishes.
+func (c *Claims) Load() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	b, err := os.ReadFile(c.Path)
+	if err != nil {
+		return
+	}
+	var list []Claim
+	if json.Unmarshal(b, &list) != nil {
+		return
+	}
+	c.files = make(map[string]Claim, len(list))
+	for _, v := range list {
+		c.files[v.Project+"\x00"+v.Path] = v
+	}
+}
+
+func (c *Claims) save() {
+	if c.Path == "" {
+		return
+	}
+	list := make([]Claim, 0, len(c.files))
+	for _, v := range c.files {
+		list = append(list, v)
+	}
+	if b, err := json.Marshal(list); err == nil {
+		_ = fsutil.AtomicWrite(c.Path, b, 0o600)
+	}
 }
 
 type Claim struct {
@@ -37,11 +79,34 @@ func (c *Claims) cleanup(now time.Time) {
 	}
 }
 
-// Acquire keeps the first owner on conflict and returns advisory warnings.
+// TryAcquire takes every path or none, for the block policy: a denied edit
+// must not leave claims behind on the paths that happened to be free.
+func (c *Claims) TryAcquire(project, agent, session string, paths []string, now time.Time) []Claim {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.cleanup(now)
+	var conflicts []Claim
+	for _, path := range paths {
+		if old, ok := c.files[project+"\x00"+path]; ok && (old.Agent != agent || old.Session != session) {
+			conflicts = append(conflicts, old)
+		}
+	}
+	if len(conflicts) > 0 {
+		return conflicts
+	}
+	return c.acquire(project, agent, session, paths, now)
+}
+
+// Acquire keeps the first owner on conflict and returns the conflicts.
 func (c *Claims) Acquire(project, agent, session string, paths []string, now time.Time) []Claim {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.cleanup(now)
+	return c.acquire(project, agent, session, paths, now)
+}
+
+func (c *Claims) acquire(project, agent, session string, paths []string, now time.Time) []Claim {
+	defer c.save()
 	var conflicts []Claim
 	for _, path := range paths {
 		key := project + "\x00" + path
@@ -53,7 +118,7 @@ func (c *Claims) Acquire(project, agent, session string, paths []string, now tim
 		if !ok {
 			old = Claim{Project: project, Path: path, Agent: agent, Session: session, ClaimedAt: now}
 		}
-		old.ExpiresAt = now.Add(15 * time.Minute)
+		old.ExpiresAt = now.Add(ClaimTTL)
 		c.files[key] = old
 	}
 	return conflicts
@@ -67,6 +132,7 @@ func (c *Claims) Release(agent, session string) {
 			delete(c.files, k)
 		}
 	}
+	c.save()
 }
 
 func (c *Claims) List(now time.Time) []Claim {
@@ -132,6 +198,16 @@ func EditPaths(tool string, raw json.RawMessage, cwd, root string) []string {
 		out = append(out, path)
 	}
 	return out
+}
+
+// ClaimDenial explains a refused edit to the agent.
+func ClaimDenial(conflicts []Claim) string {
+	var b strings.Builder
+	b.WriteString("Bridge 已拦截这次编辑，以下文件正由其他会话修改，请稍后重试或改做别的：\n")
+	for _, v := range conflicts {
+		fmt.Fprintf(&b, "- %s 已由 %s 会话 %s 认领\n", v.Path, v.Agent, v.Session)
+	}
+	return b.String()
 }
 
 func ClaimWarning(conflicts []Claim) string {

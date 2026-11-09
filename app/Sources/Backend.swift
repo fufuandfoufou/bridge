@@ -229,6 +229,7 @@ struct Settings: Decodable {
     var extractor: String
     var injectOnPrompt: Bool
     var injectTokenBudget: Int
+    var conflictPolicy: String
     var keepRecentTurns: Int
     var excludeProjects: [String]
     var includeProjects: [String]

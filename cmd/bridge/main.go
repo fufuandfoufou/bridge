@@ -898,6 +898,10 @@ func hookCmd() *cobra.Command {
 		if native == "" {
 			return nil
 		}
+		if r.Deny {
+			return json.NewEncoder(os.Stdout).Encode(map[string]any{"hookSpecificOutput": map[string]string{
+				"hookEventName": native, "permissionDecision": "deny", "permissionDecisionReason": r.Output}})
+		}
 		if r.Output != "" {
 			if err := json.NewEncoder(os.Stdout).Encode(map[string]any{"hookSpecificOutput": map[string]string{
 				"hookEventName": native, "additionalContext": r.Output}}); err != nil {
