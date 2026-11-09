@@ -69,10 +69,26 @@ Backups before writing, temp file plus atomic rename, read-back verification, an
 
 ## Quick start
 
-Requires macOS and Go 1.27+. Building the desktop app also needs Xcode.
+### Download (recommended)
+
+Requires macOS 13+ on Apple Silicon or Intel.
+
+1. Download `Bridge-<version>.dmg` from [Releases](https://github.com/fufuandfoufou/bridge/releases/latest) and drag Bridge to Applications.
+2. This build is **not signed or notarized by Apple**, so macOS blocks it until you allow it once in Terminal:
+
+   ```bash
+   xattr -cr /Applications/Bridge.app
+   ```
+
+3. Open Bridge and click "接入 agent" (connect). Don't move the app afterwards.
+4. Codex runs hooks only after you trust them, so review them once under `/hooks` in Codex.
+
+### Build from source
+
+Requires Go 1.27+. Building the desktop app also needs Xcode.
 
 ```bash
-git clone <repository-url> && cd bridge
+git clone https://github.com/fufuandfoufou/bridge.git && cd bridge
 go build -o bin/bridge ./cmd/bridge
 
 ./bin/bridge init          # detect agents, install hooks and MCP, register the service
@@ -86,10 +102,6 @@ Build the desktop app:
 ```bash
 ./scripts/build-app.sh     # creates dist/Bridge-<version>.dmg
 ```
-
-Move the app to Applications before clicking "接入 agent" (connect), and don't move it afterwards. The default ad-hoc signature only suits your own Mac; distribution needs `SIGN_IDENTITY` and notarization.
-
-Codex runs hooks only after you trust them, so review them once under `/hooks` in Codex after connecting.
 
 ## Common commands
 
