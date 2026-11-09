@@ -139,3 +139,7 @@ go test ./...
 Acceptance tests live in `test/acceptance` and run entirely under an isolated HOME, never touching real agent data.
 
 Adapters for new agents are welcome. Start by passing `bridge adapter test <id>`.
+
+## License
+
+Licensed under the [Apache License 2.0](LICENSE).

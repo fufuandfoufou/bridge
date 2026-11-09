@@ -139,3 +139,7 @@ go test ./...
 验收测试位于 `test/acceptance`，全部在隔离的 HOME 中运行，不会接触真实的 agent 数据。
 
 欢迎为新的 agent 贡献适配器，先用 `bridge adapter test <id>` 跑通一致性测试。
+
+## 许可证
+
+本项目基于 [Apache License 2.0](LICENSE) 开源。
