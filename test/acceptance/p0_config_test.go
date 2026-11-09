@@ -42,7 +42,7 @@ func Test_POC(t *testing.T) {
 }
 
 func Test_P2_OutOfScope(t *testing.T) {
-	for _, id := range []string{"LOCK-01", "LOCK-02", "LOCK-03", "TASK-01", "WT-01"} {
+	for _, id := range []string{"TASK-01", "WT-01"} {
 		t.Run(id, func(t *testing.T) { t.Skip("P2，不在本次 P0 + P1 开发范围") })
 	}
 }

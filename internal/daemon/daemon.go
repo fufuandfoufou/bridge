@@ -211,6 +211,7 @@ type Request struct {
 // Response answers a Request.
 type Response struct {
 	Output string `json:"output,omitempty"`
+	Deny   bool   `json:"deny,omitempty"` // refuse the tool call; Output is the reason
 	Error  string `json:"error,omitempty"`
 }
 
@@ -286,6 +287,12 @@ func (d *Daemon) Handle(req Request) Response {
 				allowed = append(allowed, path)
 			}
 		}
+		if cfg.Live.ConflictPolicy == "block" {
+			if conflicts := d.claims.TryAcquire(p.ID, req.Agent, req.Session, allowed, time.Now()); len(conflicts) > 0 {
+				return Response{Output: live.ClaimDenial(conflicts), Deny: true}
+			}
+			break
+		}
 		out = live.ClaimWarning(d.claims.Acquire(p.ID, req.Agent, req.Session, allowed, time.Now()))
 	case string(kit.HookSessionStart):
 		out, err = d.liveS.SessionStart(req.Agent, req.Session, req.CWD)
@@ -344,6 +351,8 @@ func (d *Daemon) Run(ctx context.Context) error {
 	}
 	defer l.Close()
 	defer os.Remove(fsutil.SocketPath())
+	d.claims.Path = filepath.Join(fsutil.DataDir(), "claims.json")
+	d.claims.Load()
 	d.ing = &Ingester{Store: d.Store, Registry: d.Registry, Config: d.Config}
 	d.liveS = &live.Service{Store: d.Store, Config: d.Config, HasMCP: func(agent string) bool {
 		a, ok := d.Registry.Get(agent)

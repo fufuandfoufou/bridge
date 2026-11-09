@@ -1,11 +1,13 @@
 #!/bin/bash
 # Builds a universal Bridge.app and dist/Bridge-<version>.dmg.
 # SIGN_IDENTITY selects the code signing identity; the default "-" is ad-hoc,
-# which runs on this Mac. Distribution needs a Developer ID and notarization.
+# which runs on this Mac. Distribution needs a Developer ID and notarization:
+# set NOTARY_KEY_FILE, NOTARY_KEY_ID and NOTARY_ISSUER (App Store Connect API
+# key) to submit the dmg to Apple. VERSION overrides the version in Info.plist.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-VERSION=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' app/Info.plist)
+VERSION="${VERSION:-$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' app/Info.plist)}"
 SIGN_IDENTITY="${SIGN_IDENTITY:--}"
 # Signing fails on extended attributes macOS adds under ~/Documents, so the
 # bundle is assembled in a temporary directory.
@@ -30,6 +32,7 @@ for target in arm64-apple-macos13.0 x86_64-apple-macos13.0; do
 done
 lipo -create -output "$APP/Contents/MacOS/Bridge" "$BUILD"/Bridge-*-apple-macos13.0
 cp app/Info.plist "$APP/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" -c "Set :CFBundleVersion $VERSION" "$APP/Contents/Info.plist"
 
 echo "==> icon"
 ICONSET="$BUILD/AppIcon.iconset"
@@ -43,8 +46,11 @@ iconutil -c icns -o "$APP/Contents/Resources/AppIcon.icns" "$ICONSET"
 
 echo "==> sign ($SIGN_IDENTITY)"
 xattr -cr "$APP"
-codesign --force --options runtime --timestamp=none -s "$SIGN_IDENTITY" "$APP/Contents/Resources/bridge"
-codesign --force --options runtime --timestamp=none -s "$SIGN_IDENTITY" "$APP"
+# Notarization requires a secure timestamp; ad-hoc signatures can't have one.
+TIMESTAMP=(--timestamp=none)
+[ "$SIGN_IDENTITY" != "-" ] && TIMESTAMP=(--timestamp)
+codesign --force --options runtime "${TIMESTAMP[@]}" -s "$SIGN_IDENTITY" "$APP/Contents/Resources/bridge"
+codesign --force --options runtime "${TIMESTAMP[@]}" -s "$SIGN_IDENTITY" "$APP"
 codesign --verify --strict "$APP"
 
 echo "==> dmg"
@@ -54,4 +60,17 @@ cp -R "$APP" "$STAGE/"
 ln -s /Applications "$STAGE/Applications"
 hdiutil create -quiet -volname "Bridge" -srcfolder "$STAGE" -format UDZO -ov "$DMG"
 hdiutil verify -quiet "$DMG"
+
+if [ "$SIGN_IDENTITY" != "-" ]; then
+  codesign --force "${TIMESTAMP[@]}" -s "$SIGN_IDENTITY" "$DMG"
+fi
+
+if [ -n "${NOTARY_KEY_FILE:-}" ]; then
+  echo "==> notarize"
+  xcrun notarytool submit "$DMG" --key "$NOTARY_KEY_FILE" --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER" --wait --timeout 30m
+  xcrun stapler staple "$DMG"
+  xcrun stapler validate "$DMG"
+  spctl --assess --type open --context context:primary-signature --verbose "$DMG"
+fi
+
 echo "built $DMG"

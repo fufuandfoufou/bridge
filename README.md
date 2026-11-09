@@ -69,10 +69,26 @@ agent 的会话文件不是公开接口，版本升级可能改变格式。Bridg
 
 ## 快速开始
 
-需要 macOS 和 Go 1.27+；构建桌面应用还需要 Xcode。
+### 下载安装（推荐）
+
+需要 macOS 13+，支持 Apple Silicon 和 Intel。
+
+1. 从 [Releases](https://github.com/fufuandfoufou/bridge/releases/latest) 下载 `Bridge-<版本>.dmg`，把 Bridge 拖到"应用程序"。
+2. 当前版本**没有经过 Apple 签名和公证**，macOS 默认会阻止打开，需要在终端放行一次：
+
+   ```bash
+   xattr -cr /Applications/Bridge.app
+   ```
+
+3. 打开 Bridge，点击"接入 agent"。接入后不要移动应用。
+4. Codex 要求用户信任 hooks 后才会执行，接入后请在 Codex 的 `/hooks` 中审核一次。
+
+### 从源码构建
+
+需要 Go 1.27+；构建桌面应用还需要 Xcode。
 
 ```bash
-git clone <仓库地址> && cd bridge
+git clone https://github.com/fufuandfoufou/bridge.git && cd bridge
 go build -o bin/bridge ./cmd/bridge
 
 ./bin/bridge init          # 探测 agent，安装 hooks 与 MCP，注册后台服务
@@ -86,10 +102,6 @@ go build -o bin/bridge ./cmd/bridge
 ```bash
 ./scripts/build-app.sh     # 生成 dist/Bridge-<版本>.dmg
 ```
-
-把应用拖到"应用程序"后再点"接入 agent"，接入后不要移动应用。默认是 ad-hoc 签名，只适合本机使用；分发需要设置 `SIGN_IDENTITY` 并完成公证。
-
-Codex 要求用户信任 hooks 后才会执行，接入后请在 Codex 的 `/hooks` 中审核一次。
 
 ## 常用命令
 
@@ -121,7 +133,7 @@ Codex 要求用户信任 hooks 后才会执行，接入后请在 Codex 的 `/hoo
 - 迁移不是字节级副本：推理内容不迁移，无法映射的工具转为文本，超长会话会压缩。
 - 追加的历史要重新打开会话才生效，正在运行的客户端不会感知。Codex 没有运行状态登记，只能按文件最近是否变化来判断是否在使用。
 - Codex 的原生分页会话暂不支持追加更新，只能生成新副本。
-- 文件认领只提醒、不拦截，后台重启后清空，Shell 命令等未识别的编辑方式不在覆盖范围内。
+- 文件认领可设为提醒或拦截，只约束接入的 agent 的编辑工具；Shell 命令、手工编辑不受保护，后台离线时不拦截。
 - 任务看板、worktree 模式、MCP 配置同步、历史会话导入尚未实现。
 - 目前只支持 macOS。
 
