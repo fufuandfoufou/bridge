@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "bridge configuration",
+  "type": "object",
+  "properties": {
+    "version": { "const": 1 },
+    "agents": {
+      "type": "object",
+      "properties": { "enabled": { "type": "array", "items": { "type": "string" } } },
+      "additionalProperties": {
+        "type": "object",
+        "properties": { "direction": { "enum": ["both", "send-only", "receive-only"] } }
+      }
+    },
+    "sync": {
+      "type": "object",
+      "properties": {
+        "sessions": { "type": "boolean" },
+        "memory": { "type": "boolean" },
+        "global_memory": { "type": "boolean" },
+        "project_memory": { "type": "boolean" },
+        "rules": { "type": "boolean" },
+        "rules_source": { "type": "string" },
+        "mcp_configs": { "type": "boolean" },
+        "exclude_files": { "type": "array", "items": { "type": "string" } },
+        "skills": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "exclude": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      }
+    },
+    "handoff": {
+      "type": "object",
+      "properties": {
+        "keep_recent_turns": { "type": "integer", "minimum": 1 },
+        "max_context_ratio": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 }
+      }
+    },
+    "live": {
+      "type": "object",
+      "properties": {
+        "inject_on_prompt": { "type": "boolean" },
+        "inject_token_budget": { "type": "integer", "minimum": 0 },
+        "conflict_policy": { "enum": ["warn", "block"] }
+      }
+    },
+    "memory": {
+      "type": "object",
+      "properties": {
+        "auto_extract": { "type": "boolean" },
+        "extractor": { "type": "string" },
+        "global_categories": { "type": "array", "items": { "type": "string" } },
+        "min_confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "max_global": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "properties": {
+        "exclude_projects": { "type": "array", "items": { "type": "string" } },
+        "include_projects": { "type": "array", "items": { "type": "string" } },
+        "redact": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "adapters": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": { "path": { "type": "string" } },
+        "required": ["path"]
+      }
+    }
+  }
+}

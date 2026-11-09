@@ -1,0 +1,141 @@
+<p align="center"><img src="app/logo.png" width="120" alt="Bridge logo"></p>
+
+<h1 align="center">Bridge</h1>
+
+<p align="center">让编程 agent 共享同一份上下文：在 Claude Code 和 Codex 之间接续会话、互通进展、共享记忆和规则。</p>
+
+<p align="center"><strong>简体中文</strong> · <a href="README.en.md">English</a></p>
+
+---
+
+同时用多个编程 agent 时，每个 agent 都是孤岛。在 Claude Code 里调试了 30 轮，换到 Codex 就得从头交代；纠正过的编码偏好，另一个 agent 不知道；`CLAUDE.md` 和 `AGENTS.md` 内容大同小异，改一处忘一处；两个 agent 同时工作，互相不知道对方改了什么。
+
+Bridge 是一个本地运行的工具，用一个统一模型解决这些问题。数据默认留在本机。
+
+## 和同类项目相比的优势
+
+现有项目大多只解决其中一个方面。Bridge 把**会话、记忆、文件、实时协作**放在同一个统一事件模型上。
+
+| 项目 | 原生会话迁移 | 实时协作 | 共享记忆 | 规则 / Skill 同步 | 新增 agent 的方式 |
+| --- | :---: | :---: | :---: | :---: | --- |
+| **Bridge** | ✅ | ✅ | ✅ | ✅ | 实现一个适配器，任意语言 |
+| continues | 交接文档注入 | — | — | — | 覆盖多种 agent |
+| cc-sync | ✅ 仅两家 | — | — | — | 两两转换 |
+| rses | 上下文注入 | — | — | — | 内置三家 |
+| [agentmemory](https://github.com/rohitg00/agentmemory) | — | — | ✅ | — | MCP + hooks |
+| [Memorix](https://github.com/AVIDS2/memorix) | — | — | ✅ | ✅ | 不做原生会话迁移 |
+| agentsync | — | — | — | ✅ 软链接 | 只管文件 |
+
+> 表格依据各项目的公开介绍整理，这些项目可能已经更新，欢迎提 issue 指正。
+
+### 1. 原生迁移，而不是一份摘要
+会话会转换成目标 agent 自己的格式，出现在它的 `resume` 列表里，打开就是真实的对话历史和工具调用记录。无法对应的工具会明确降级成文本，迁移结果会报告省略、压缩和截断了什么，不会把有损说成无损。
+
+### 2. 迁移后还能互相更新
+迁移不是一次性的。Bridge 记录两边的同步边界，之后任一边有新内容，都可以把增量追加到另一边，会话 ID 不变。两边同时有更新时，由你选择以哪边为准。
+
+### 3. 实时互通进展
+hook 在每次发消息时，把其他 agent 的最新进展注入当前 agent：改了哪些文件、用户的最新指令、对方的最新回复。按已读水位只注入增量，有 token 上限。这已在真实的 Claude Code 和 Codex 上验证双向生效。
+
+### 4. Hub 架构，新增 agent 不用两两适配
+所有 agent 经适配器转成统一事件，N 个 agent 只需要 N 个适配器。外部适配器用 JSON-RPC over stdio，任何语言都能写，并提供一致性测试。
+
+### 5. 把兼容性当作一等问题
+agent 的会话文件不是公开接口，版本升级可能改变格式。Bridge 的做法是：
+
+- 未验证的版本默认只读，迁移自动降级为交接文档，不会静默写坏。
+- 发现新版本时自动检测：让**真实客户端**加载一条探测会话，通过才放行。检测在临时目录进行，不联网、不使用凭据。
+- 也可以在界面上对当前版本手动启用，并随时撤销。
+
+### 6. 写入安全
+写入前备份，临时文件加原子重命名，写完读回校验，失败回滚。跨文件的写入有操作日志，进程在任何一步被杀都能恢复。卸载时会保留你后来手动改过的内容。
+
+### 7. 隐私默认收紧
+- 脱敏在写入数据库之前完成，内置常见密钥规则，推理内容不入库。
+- 路径排除是安全底线，项目配置不能取消全局排除，软链接也绕不过去。
+- 不开放 TCP 端口，只用权限 0600 的 Unix socket。
+- 记忆自动提取默认关闭，因为它会把对话片段发给模型服务，开启前会明确告知。
+
+## 功能
+
+| 模块 | 能力 |
+| --- | --- |
+| 会话迁移 | 索引和筛选会话、原生迁移、工具映射、超长裁剪、交接文档降级、迁移后双向更新 |
+| 实时协作 | 增量采集、hook 注入进展、MCP 查询（`session_list`、`session_events`、`memory_search`）、文件认领提醒 |
+| 记忆 | 全局偏好和项目记忆、自动提取（可选）、冲突取代、审核、删除后不再提取 |
+| 文件同步 | 规则与 Skill 以一份为源、软链接或生成副本、漂移检测、合回源或以源为准 |
+| 配置 | 四层合并、按类别和 agent 开关、同步方向、`why` 解释生效来源 |
+| 桌面应用 | macOS 原生界面和状态栏：查看状态、迁移、暂停同步、管理记忆和设置 |
+
+## 快速开始
+
+需要 macOS 和 Go 1.27+；构建桌面应用还需要 Xcode。
+
+```bash
+git clone <仓库地址> && cd bridge
+go build -o bin/bridge ./cmd/bridge
+
+./bin/bridge init          # 探测 agent，安装 hooks 与 MCP，注册后台服务
+./bin/bridge status        # 查看各 agent 实际生效的通道
+./bin/bridge sessions      # 列出会话
+./bin/bridge handoff <会话 ID> --to codex
+```
+
+构建桌面应用：
+
+```bash
+./scripts/build-app.sh     # 生成 dist/Bridge-<版本>.dmg
+```
+
+把应用拖到"应用程序"后再点"接入 agent"，接入后不要移动应用。默认是 ad-hoc 签名，只适合本机使用；分发需要设置 `SIGN_IDENTITY` 并完成公证。
+
+Codex 要求用户信任 hooks 后才会执行，接入后请在 Codex 的 `/hooks` 中审核一次。
+
+## 常用命令
+
+| 命令 | 作用 |
+| --- | --- |
+| `init` / `uninstall` | 接入 / 卸载并还原 |
+| `status` / `doctor` | 接入状态 / 自检 |
+| `sessions` / `handoff` | 列出 / 迁移会话 |
+| `plan` / `sync` | 预演 / 执行规则与 Skill 同步 |
+| `why <路径或记忆 ID>` | 解释同步结果及生效的配置 |
+| `memory list/review/add/edit/forget/extract` | 管理记忆 |
+| `adapter list/trust/test` | 外部适配器与一致性测试 |
+
+任何命令都可以用 `--set key=value` 覆盖配置。配置分四层：内置默认 → `~/.config/bridge/config.toml` → `<repo>/.bridge.toml` → `--set`。
+
+## 兼容性
+
+| Agent | 内置可写版本 | 其他版本 |
+| --- | --- | --- |
+| Claude Code | 2.1.x | 自动检测，或手动启用 |
+| Codex | 0.144.x、0.166.x | 自动检测，或手动启用 |
+
+已在真实客户端上验证过的：Claude Code 2.1.317 ↔ Codex CLI 0.144.1 的原生迁移和恢复，Codex 0.166.0-alpha.6 的恢复，以及两个方向的 hook 注入。
+
+## 当前状态与局限
+
+这是早期项目，请先在不重要的会话上试用。
+
+- 迁移不是字节级副本：推理内容不迁移，无法映射的工具转为文本，超长会话会压缩。
+- 追加的历史要重新打开会话才生效，正在运行的客户端不会感知。Codex 没有运行状态登记，只能按文件最近是否变化来判断是否在使用。
+- Codex 的原生分页会话暂不支持追加更新，只能生成新副本。
+- 文件认领只提醒、不拦截，后台重启后清空，Shell 命令等未识别的编辑方式不在覆盖范围内。
+- 任务看板、worktree 模式、MCP 配置同步、历史会话导入尚未实现。
+- 目前只支持 macOS。
+
+## 文档与贡献
+
+- [外部适配器协议](docs/adapter-protocol.md)
+- [适配器示例](examples/bridge-adapter-demo)
+
+运行测试：
+
+```bash
+go test ./...
+```
+
+验收测试位于 `test/acceptance`，全部在隔离的 HOME 中运行，不会接触真实的 agent 数据。
+
+欢迎为新的 agent 贡献适配器，先用 `bridge adapter test <id>` 跑通一致性测试。
