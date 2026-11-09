@@ -44,8 +44,8 @@ struct MenuPanel: View {
     }
 
     private var statusText: String {
-        if model.status?.paused == true { return "同步已暂停" }
-        return model.status?.daemon == true ? "后台同步运行中" : "后台同步未运行"
+        if model.status?.paused == true { return tr("同步已暂停") }
+        return model.status?.daemon == true ? tr("后台同步运行中") : tr("后台同步未运行")
     }
 
     private var statusColor: Color {
@@ -79,9 +79,9 @@ struct MenuPanel: View {
     private func needsAttention(_ a: AgentStatus) -> Bool { !a.writable || (a.hooks && !a.hooksTrusted) }
 
     private func summary(_ a: AgentStatus) -> String {
-        if a.hooks && !a.hooksTrusted { return "hooks 信任待确认" }
-        if !a.writable { return "版本未验证" }
-        return a.hooks ? "已接入" : "未接入"
+        if a.hooks && !a.hooksTrusted { return tr("hooks 信任待确认") }
+        if !a.writable { return tr("版本未验证") }
+        return a.hooks ? tr("已接入") : tr("未接入")
     }
 
     private var sessions: some View {
@@ -140,7 +140,7 @@ struct MenuPanel: View {
             } else {
                 MenuRow("暂停同步", "pause.fill") { togglePause("pause") }
             }
-            MenuRow(dir.isEmpty ? "同步全局规则与 Skill" : "同步 \(URL(fileURLWithPath: dir).lastPathComponent) 的规则与 Skill", "arrow.triangle.2.circlepath") { syncFiles() }
+            MenuRow(dir.isEmpty ? tr("同步全局规则与 Skill") : tr("同步 %@ 的规则与 Skill", URL(fileURLWithPath: dir).lastPathComponent), "arrow.triangle.2.circlepath") { syncFiles() }
             MenuRow("打开 Bridge", "macwindow") {
                 openWindow(id: "main")
                 NSApp.activate(ignoringOtherApps: true)
@@ -161,7 +161,7 @@ struct MenuPanel: View {
         guard !busy else { return }
         busy = true
         repeatable = nil
-        report("正在迁移到 \(target.displayName)…")
+        report(tr("正在迁移到 %@…", target.displayName))
         Task {
             defer { busy = false }
             do {
@@ -170,9 +170,9 @@ struct MenuPanel: View {
                     report(r.message, copy: r.resumeCommand)
                     repeatable = (s, target)
                 } else if r.mode == "native" {
-                    report("已迁移到 \(target.displayName)", copy: r.resumeCommand)
+                    report(tr("已迁移到 %@", target.displayName), copy: r.resumeCommand)
                 } else {
-                    report("已生成交接文档：\(r.documentPath)")
+                    report(tr("已生成交接文档：%@", r.documentPath))
                 }
                 await model.refreshSessions()
             } catch { report(error.localizedDescription) }
@@ -183,7 +183,7 @@ struct MenuPanel: View {
         guard !busy else { return }
         busy = true
         repeatable = nil
-        report("正在更新…")
+        report(tr("正在更新…"))
         Task {
             defer { busy = false }
             do {
@@ -197,7 +197,7 @@ struct MenuPanel: View {
         Task {
             await model.perform { try await Backend.call([command]) }
             await model.refreshStatus()
-            report(command == "pause" ? "已暂停：不采集、不注入、不同步文件" : "已恢复同步")
+            report(command == "pause" ? tr("已暂停：不采集、不注入、不同步文件") : tr("已恢复同步"))
         }
     }
 
@@ -207,7 +207,7 @@ struct MenuPanel: View {
             defer { busy = false }
             do {
                 let r = try await Backend.api(SyncReport.self, ["sync"] + (dir.isEmpty ? [] : ["--dir", dir]))
-                report("已同步 \(r.applied.count) 项" + (r.blocked.isEmpty ? "" : "，\(r.blocked.count) 项需要在主窗口处理"))
+                report(tr("已同步 %lld 项", r.applied.count) + (r.blocked.isEmpty ? "" : tr("，%lld 项需要在主窗口处理", r.blocked.count)))
             } catch { report(error.localizedDescription) }
         }
     }
@@ -229,7 +229,7 @@ struct MenuRow: View {
         Button(action: action) {
             HStack(spacing: 8) {
                 Image(systemName: icon).frame(width: 16)
-                Text(title).lineLimit(1)
+                Text(LocalizedStringKey(title)).lineLimit(1)
                 Spacer()
             }
             .padding(.horizontal, 6)

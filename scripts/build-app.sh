@@ -32,6 +32,7 @@ for target in arm64-apple-macos13.0 x86_64-apple-macos13.0; do
 done
 lipo -create -output "$APP/Contents/MacOS/Bridge" "$BUILD"/Bridge-*-apple-macos13.0
 cp app/Info.plist "$APP/Contents/Info.plist"
+cp -R app/en.lproj app/zh-Hans.lproj "$APP/Contents/Resources/"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" -c "Set :CFBundleVersion $VERSION" "$APP/Contents/Info.plist"
 
 echo "==> icon"
