@@ -4,6 +4,12 @@ import SwiftUI
 // All product logic lives in the bundled `bridge` binary; the app only calls
 // its JSON interface, so the UI and the core can't drift apart.
 
+/// Localizes text that isn't a literal handed straight to a SwiftUI view.
+func tr(_ key: String, _ args: CVarArg...) -> String {
+    let format = NSLocalizedString(key, comment: "")
+    return args.isEmpty ? format : String(format: format, arguments: args)
+}
+
 struct BackendError: LocalizedError {
     let message: String
     var errorDescription: String? { message }
@@ -22,6 +28,7 @@ enum Backend {
             p.arguments = args
             // Apps launched from Finder get a minimal PATH, without Homebrew.
             var env = ProcessInfo.processInfo.environment
+            env["BRIDGE_LANG"] = Bundle.main.preferredLocalizations.first?.hasPrefix("en") == true ? "en" : "zh"
             env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:" + (env["PATH"] ?? "/usr/bin:/bin")
             p.environment = env
             let out = Pipe()
@@ -55,10 +62,10 @@ enum Backend {
         do {
             env = try decoder.decode(Envelope<T>.self, from: Data(line.utf8))
         } catch {
-            throw BackendError(message: "无法解析后台返回：\(text.prefix(300))")
+            throw BackendError(message: tr("无法解析后台返回：") + text.prefix(300))
         }
         guard env.ok, let data = env.data else {
-            throw BackendError(message: env.error ?? "未知错误")
+            throw BackendError(message: env.error ?? tr("未知错误"))
         }
         return data
     }
@@ -69,7 +76,7 @@ enum Backend {
         let line = text.split(separator: "\n").last.map(String.init) ?? ""
         struct Status: Decodable { let ok: Bool; let error: String? }
         let s = try JSONDecoder().decode(Status.self, from: Data(line.utf8))
-        if !s.ok { throw BackendError(message: s.error ?? "未知错误") }
+        if !s.ok { throw BackendError(message: s.error ?? tr("未知错误")) }
     }
 }
 
@@ -116,14 +123,14 @@ struct SessionRow: Decodable, Identifiable, Hashable {
     var diverged: Bool { syncState == "diverged" }
     var syncLabel: String {
         switch syncState {
-        case "current": return "已同步"
-        case "diverged": return "两边有更新"
-        case "source_ahead", "target_ahead": return "有更新"
+        case "current": return tr("已同步")
+        case "diverged": return tr("两边有更新")
+        case "source_ahead", "target_ahead": return tr("有更新")
         default: return ""
         }
     }
 
-    var displayTitle: String { title.isEmpty ? "（未命名会话）" : title }
+    var displayTitle: String { title.isEmpty ? tr("（未命名会话）") : title }
     var folder: String { URL(fileURLWithPath: cwd).lastPathComponent }
     var agentName: String { Names.agent(agent) }
 }
@@ -162,22 +169,22 @@ struct SyncAction: Decodable, Identifiable {
 
     var kindName: String {
         switch kind {
-        case "noop": return "已同步"
-        case "skip": return "跳过"
-        case "link": return "创建链接"
-        case "relink": return "替换为链接"
-        case "generate": return "生成副本"
-        case "drift": return "副本被修改"
-        case "conflict": return "内容冲突"
-        case "need_source": return "缺少源文件"
+        case "noop": return tr("已同步")
+        case "skip": return tr("跳过")
+        case "link": return tr("创建链接")
+        case "relink": return tr("替换为链接")
+        case "generate": return tr("生成副本")
+        case "drift": return tr("副本被修改")
+        case "conflict": return tr("内容冲突")
+        case "need_source": return tr("缺少源文件")
         default: return kind
         }
     }
 
     var displayReason: String {
         switch kind {
-        case "need_source": return "还没有规则源，这里已有内容；可用下方“把副本合回源”把它作为源"
-        case "drift": return "副本被手工修改；可合回源，或以源为准覆盖"
+        case "need_source": return tr("还没有规则源，这里已有内容；可用下方“把副本合回源”把它作为源")
+        case "drift": return tr("副本被手工修改；可合回源，或以源为准覆盖")
         default: return reason
         }
     }
@@ -199,10 +206,10 @@ struct MemoryItem: Decodable, Identifiable {
 
     var statusName: String {
         switch status {
-        case "active": return "生效中"
-        case "pending": return "待审核"
-        case "superseded": return "已取代"
-        case "forgotten": return "已删除"
+        case "active": return tr("生效中")
+        case "pending": return tr("待审核")
+        case "superseded": return tr("已取代")
+        case "forgotten": return tr("已删除")
         default: return status
         }
     }
@@ -251,9 +258,9 @@ enum Names {
 
     static func direction(_ d: String) -> String {
         switch d {
-        case "send-only": return "只发送"
-        case "receive-only": return "只接收"
-        default: return "双向"
+        case "send-only": return tr("只发送")
+        case "receive-only": return tr("只接收")
+        default: return tr("双向")
         }
     }
 }

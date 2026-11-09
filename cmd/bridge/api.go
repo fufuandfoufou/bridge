@@ -45,7 +45,7 @@ func apiCmd() *cobra.Command {
 			}
 			e := json.NewEncoder(os.Stdout)
 			e.SetEscapeHTML(false)
-			return e.Encode(out)
+			return e.Encode(localizeAPI(out))
 		}}
 		c.AddCommand(sub)
 		return sub
@@ -378,7 +378,7 @@ func apiCmd() *cobra.Command {
 	add("claims", cobra.NoArgs, func(context.Context, []string) (any, error) {
 		response, err := daemon.Ask(daemon.Request{Method: "claims"}, 100*time.Millisecond, 500*time.Millisecond)
 		if err != nil {
-			return nil, fmt.Errorf("无法连接后台服务：%w", err)
+			return map[string]any{"claims": []live.Claim{}}, nil // claims live in the daemon
 		}
 		if response.Error != "" {
 			return nil, errors.New(response.Error)

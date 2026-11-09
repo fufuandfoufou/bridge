@@ -23,7 +23,7 @@ struct RootView: View {
     var body: some View {
         NavigationSplitView {
             List(Page.allCases, selection: $page) { p in
-                Label(p.rawValue, systemImage: p.icon).tag(p)
+                Label(LocalizedStringKey(p.rawValue), systemImage: p.icon).tag(p)
             }
             .navigationSplitViewColumnWidth(min: 170, ideal: 190)
         } detail: {
@@ -204,7 +204,7 @@ struct AgentCard: View {
                     row("会话迁移", agent.handoff)
                     row("实时协作", agent.live)
                     row("记忆注入", agent.memory)
-                    row("已索引", "\(agent.sessions) 个会话，\(agent.events) 条事件")
+                    row("已索引", tr("%lld 个会话，%lld 条事件", agent.sessions, agent.events))
                     if !agent.last.isEmpty { row("最近活动", agent.last) }
                 }
                 .font(.callout)
@@ -254,15 +254,15 @@ struct AgentCard: View {
     }
 
     private var badge: String {
-        if !agent.installed { return "未安装" }
-        if !agent.enabled { return "已停用" }
-        if agent.hooks && !agent.hooksTrusted { return Names.direction(agent.direction) + " · 信任待确认" }
-        return Names.direction(agent.direction) + (agent.hooks ? " · 已接入" : " · 未接入")
+        if !agent.installed { return tr("未安装") }
+        if !agent.enabled { return tr("已停用") }
+        if agent.hooks && !agent.hooksTrusted { return Names.direction(agent.direction) + " · " + tr("信任待确认") }
+        return Names.direction(agent.direction) + " · " + (agent.hooks ? tr("已接入") : tr("未接入"))
     }
 
     private func row(_ k: String, _ v: String) -> some View {
         GridRow {
-            Text(k).foregroundStyle(.secondary)
+            Text(LocalizedStringKey(k)).foregroundStyle(.secondary)
             Text(v).textSelection(.enabled)
         }
     }
@@ -352,8 +352,8 @@ struct ContentUnavailableMessage: View {
     let detail: String
     var body: some View {
         VStack(spacing: 6) {
-            Text(title).font(.title3.weight(.semibold))
-            Text(detail).foregroundStyle(.secondary)
+            Text(LocalizedStringKey(title)).font(.title3.weight(.semibold))
+            Text(LocalizedStringKey(detail)).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -434,7 +434,7 @@ struct HandoffSheet: View {
             if duplicate != nil { args.append("--again") }
             let r = try await Backend.api(HandoffResult.self, args)
             if r.mode == "duplicate" {
-                duplicate = r.message + "可以用已有的会话，或点“再次迁移”生成新的一份。"
+                duplicate = r.message + tr("可以用已有的会话，或点“再次迁移”生成新的一份。")
                 return
             }
             result = r
@@ -463,7 +463,7 @@ struct FilesView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Image(systemName: "folder")
-                Text(dir.isEmpty ? "仅全局规则与 skill" : dir).lineLimit(1).truncationMode(.middle)
+                Text(dir.isEmpty ? tr("仅全局规则与 skill") : dir).lineLimit(1).truncationMode(.middle)
                 Spacer()
                 Button("选择项目…") { choose() }
                 if !dir.isEmpty { Button("清除") { dir = ""; reload() } }
@@ -483,7 +483,7 @@ struct FilesView: View {
             if !attention.isEmpty || !notice.isEmpty {
                 Divider()
                 HStack {
-                    Text(notice.isEmpty ? "有 \(attention.count) 项需要你决定，内容不会被自动覆盖。" : notice).font(.callout)
+                    Text(notice.isEmpty ? tr("有 %lld 项需要你决定，内容不会被自动覆盖。", attention.count) : notice).font(.callout)
                     Spacer()
                     if !attention.isEmpty {
                         Menu("把副本合回源") {
@@ -529,7 +529,7 @@ struct FilesView: View {
             defer { busy = false }
             await model.perform {
                 let r = try await Backend.api(SyncReport.self, ["sync"] + dirArgs() + extra)
-                notice = "已同步 \(r.applied.count) 项" + (r.blocked.isEmpty ? "" : "，\(r.blocked.count) 项未处理")
+                notice = tr("已同步 %lld 项", r.applied.count) + (r.blocked.isEmpty ? "" : tr("，%lld 项未处理", r.blocked.count))
                 actions = try await Backend.api(PlanReport.self, ["plan"] + dirArgs()).actions
             }
         }
@@ -539,7 +539,7 @@ struct FilesView: View {
         let p = NSOpenPanel()
         p.canChooseFiles = false
         p.canChooseDirectories = true
-        p.prompt = "选择"
+        p.prompt = tr("选择")
         if p.runModal() == .OK, let u = p.url {
             dir = u.path
             notice = ""
@@ -551,7 +551,7 @@ struct FilesView: View {
 struct ForEachText: View {
     let lines: [String]
     init(_ l: [String]) { lines = l }
-    var body: some View { Text("覆盖前会自动备份：\n" + lines.joined(separator: "\n")) }
+    var body: some View { Text(tr("覆盖前会自动备份：") + "\n" + lines.joined(separator: "\n")) }
 }
 
 struct MemoryView: View {
@@ -670,7 +670,7 @@ struct AddMemorySheet: View {
                 Text("当前项目").tag("project")
             }.pickerStyle(.segmented)
             if scope == "project" {
-                Text(dir.isEmpty ? "请先在“规则与 Skill”页选择项目。" : dir).font(.callout).foregroundStyle(.secondary).lineLimit(1)
+                Text(dir.isEmpty ? tr("请先在“规则与 Skill”页选择项目。") : dir).font(.callout).foregroundStyle(.secondary).lineLimit(1)
             }
             HStack {
                 Spacer()
@@ -696,6 +696,7 @@ struct AddMemorySheet: View {
 }
 
 struct SettingsView: View {
+    @AppStorage("appLanguage") private var language = "system"
     @EnvironmentObject var model: AppModel
     @State private var s: Settings?
     @State private var newExclude = ""
@@ -717,6 +718,14 @@ struct SettingsView: View {
 
     private func form(_ c: Settings) -> some View {
         Form {
+            Section("语言") {
+                Picker("界面语言", selection: Binding(get: { language }, set: setLanguage)) {
+                    Text("跟随系统").tag("system")
+                    Text("简体中文").tag("zh-Hans")
+                    Text("English").tag("en")
+                }
+                Text("重新打开 Bridge 后生效。").font(.callout).foregroundStyle(.secondary)
+            }
             Section("同步内容") {
                 toggle("会话", c.sessions, "sync.sessions")
                 toggle("记忆", c.memory, "sync.memory")
@@ -796,8 +805,17 @@ struct SettingsView: View {
         .formStyle(.grouped)
     }
 
+    private func setLanguage(_ value: String) {
+        language = value
+        if value == "system" {
+            UserDefaults.standard.removeObject(forKey: "AppleLanguages")
+        } else {
+            UserDefaults.standard.set([value], forKey: "AppleLanguages")
+        }
+    }
+
     private func toggle(_ title: String, _ value: Bool, _ key: String) -> some View {
-        Toggle(title, isOn: Binding(get: { value }, set: { set(key, $0 ? "true" : "false") }))
+        Toggle(LocalizedStringKey(title), isOn: Binding(get: { value }, set: { set(key, $0 ? "true" : "false") }))
     }
 
     private func setEnabled(_ id: String, _ on: Bool, _ c: Settings) {
@@ -833,7 +851,7 @@ struct PatternList: View {
             }
         }
         HStack {
-            TextField(placeholder, text: $input)
+            TextField(LocalizedStringKey(placeholder), text: $input)
             Button("添加") { onSave(values + [input]); input = "" }
                 .disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || values.contains(input))
         }
