@@ -69,10 +69,26 @@ agent 的会话文件不是公开接口，版本升级可能改变格式。Bridg
 
 ## 快速开始
 
-需要 macOS 和 Go 1.27+；构建桌面应用还需要 Xcode。
+### 下载安装（推荐）
+
+需要 macOS 13+，支持 Apple Silicon 和 Intel。
+
+1. 从 [Releases](https://github.com/fufuandfoufou/bridge/releases/latest) 下载 `Bridge-<版本>.dmg`，把 Bridge 拖到"应用程序"。
+2. 当前版本**没有经过 Apple 签名和公证**，macOS 默认会阻止打开，需要在终端放行一次：
+
+   ```bash
+   xattr -cr /Applications/Bridge.app
+   ```
+
+3. 打开 Bridge，点击"接入 agent"。接入后不要移动应用。
+4. Codex 要求用户信任 hooks 后才会执行，接入后请在 Codex 的 `/hooks` 中审核一次。
+
+### 从源码构建
+
+需要 Go 1.27+；构建桌面应用还需要 Xcode。
 
 ```bash
-git clone <仓库地址> && cd bridge
+git clone https://github.com/fufuandfoufou/bridge.git && cd bridge
 go build -o bin/bridge ./cmd/bridge
 
 ./bin/bridge init          # 探测 agent，安装 hooks 与 MCP，注册后台服务
@@ -86,10 +102,6 @@ go build -o bin/bridge ./cmd/bridge
 ```bash
 ./scripts/build-app.sh     # 生成 dist/Bridge-<版本>.dmg
 ```
-
-把应用拖到"应用程序"后再点"接入 agent"，接入后不要移动应用。默认是 ad-hoc 签名，只适合本机使用；分发需要设置 `SIGN_IDENTITY` 并完成公证。
-
-Codex 要求用户信任 hooks 后才会执行，接入后请在 Codex 的 `/hooks` 中审核一次。
 
 ## 常用命令
 
