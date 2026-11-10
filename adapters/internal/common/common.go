@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -307,4 +308,40 @@ func TailLines(path string, n int64) [][]byte {
 		lines = lines[1:] // the first line was cut by the offset
 	}
 	return lines
+}
+
+// CachedVersion returns the version a CLI reports, running it only when the
+// binary changed since the last call by any bridge process; agents whose
+// session files don't record a version would otherwise cost every command a
+// process start.
+func CachedVersion(bin string, run func() (string, error)) string {
+	st, err := os.Stat(bin)
+	if err != nil {
+		return ""
+	}
+	key := fmt.Sprintf("%s|%d|%d", bin, st.ModTime().UnixNano(), st.Size())
+	// A disposable cache: kept out of the user's directories, so read-only
+	// commands such as plan change no files there.
+	path := filepath.Join(os.TempDir(), fmt.Sprintf("bridge-cli-versions-%d.json", os.Getuid()))
+	cache := map[string]string{}
+	if b, err := os.ReadFile(path); err == nil {
+		_ = json.Unmarshal(b, &cache)
+	}
+	if v, ok := cache[key]; ok {
+		return v
+	}
+	v, err := run()
+	if err != nil || v == "" {
+		return ""
+	}
+	for k := range cache { // drop entries for older builds of this binary
+		if strings.HasPrefix(k, bin+"|") {
+			delete(cache, k)
+		}
+	}
+	cache[key] = v
+	if b, err := json.Marshal(cache); err == nil {
+		_ = fsutil.AtomicWrite(path, b, 0o600)
+	}
+	return v
 }

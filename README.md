@@ -126,8 +126,12 @@ go build -o bin/bridge ./cmd/bridge
 | --- | --- | --- |
 | Claude Code | 2.1.x | 自动检测，或手动启用 |
 | Codex | 0.144.x、0.166.x | 自动检测，或手动启用 |
+| pi | 1.5.x | 自动检测，或手动启用 |
+| DeepSeek Harness | 只读取会话 | 迁移到它时生成交接文档 |
 
-已在真实客户端上验证过的：Claude Code 2.1.317 ↔ Codex CLI 0.144.1 的原生迁移和恢复，Codex 0.166.0-alpha.6 的恢复，以及两个方向的 hook 注入。
+已在真实客户端上验证过的：Claude Code 2.1.317 ↔ Codex CLI 0.144.1 的原生迁移和恢复，Codex 0.166.0-alpha.6 的恢复，以及两个方向的 hook 注入；pi 1.5.1 加载 Bridge 写入的会话（含工具调用历史）；DeepSeek Harness 0.2.2-rc.1 的会话读取。
+
+pi 没有 shell hooks，接入后通过 MCP 查询其他 agent 的进展，记忆写入它的全局 AGENTS.md。DeepSeek Harness 仍是开发者预览版，会话格式还在变化，Bridge 只读取它的会话：它的进展和历史会同步给其他 agent，迁移到它时生成交接文档。
 
 ## 当前状态与局限
 

@@ -126,7 +126,7 @@ const defaultsTOML = `
 version = 1
 
 [agents]
-enabled = ["claude-code", "codex"]
+enabled = ["claude-code", "codex", "pi", "dsh"]
 
 [sync]
 sessions = true

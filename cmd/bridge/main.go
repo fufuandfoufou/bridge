@@ -24,7 +24,9 @@ import (
 
 	"bridge/adapters/claudecode"
 	"bridge/adapters/codex"
+	"bridge/adapters/dsh"
 	"bridge/adapters/external"
+	"bridge/adapters/pi"
 	"bridge/internal/config"
 	"bridge/internal/daemon"
 	"bridge/internal/filesync"
@@ -65,7 +67,7 @@ func cwdCfg() (*config.Config, string, error) {
 }
 
 func registry(cfg *config.Config) *kit.Registry {
-	reg := kit.NewRegistry(claudecode.New(), codex.New())
+	reg := kit.NewRegistry(claudecode.New(), codex.New(), pi.New(), dsh.New())
 	for _, c := range external.Discover(cfg) {
 		if c.Trusted {
 			reg.Add(external.New(c.ID, c.Path))
@@ -213,7 +215,10 @@ func initCmd() *cobra.Command {
 		}
 		bin := self()
 		for _, a := range found {
-			if err := a.InstallHooks(ctx, kit.HookConfig{Command: bin, MCPCommand: []string{bin, "mcp"}}); err != nil {
+			if err := a.InstallHooks(ctx, kit.HookConfig{Command: bin, MCPCommand: []string{bin, "mcp"}}); errors.Is(err, kit.ErrNotSupported) {
+				fmt.Printf("%s 没有可安装的 hooks，只同步会话和文件\n", a.ID())
+				continue
+			} else if err != nil {
 				return fmt.Errorf("%s: %w", a.ID(), err)
 			}
 			fmt.Printf("已接入 %s\n", a.ID())
