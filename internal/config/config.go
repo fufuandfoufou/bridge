@@ -27,6 +27,9 @@ var Schema []byte
 // AgentOptions are per-agent settings.
 type AgentOptions struct {
 	Direction string `toml:"direction"`
+	// Inject decides whether the agent receives other agents' progress and
+	// memory automatically. Unset means yes.
+	Inject *bool `toml:"inject"`
 }
 
 // Skills configures skill syncing.
@@ -127,6 +130,11 @@ version = 1
 
 [agents]
 enabled = ["claude-code", "codex", "pi", "dsh"]
+
+# DeepSeek Harness uploads its session logs by default, which would include
+# injected progress from other agents, so injection there is opt-in.
+[agents.dsh]
+inject = false
 
 [sync]
 sessions = true
@@ -324,6 +332,9 @@ func decode(m map[string]any) (*Config, []string, error) {
 			if d, ok := x["direction"].(string); ok {
 				opt.Direction = d
 			}
+			if v, ok := x["inject"].(bool); ok {
+				opt.Inject = &v
+			}
 			c.Agents[k] = opt
 		default:
 			warnings = append(warnings, "unknown config key: agents."+k)
@@ -382,6 +393,15 @@ func (c *Config) AgentEnabled(id string) bool {
 		}
 	}
 	return false
+}
+
+// InjectEnabled reports whether the agent receives progress and memory
+// automatically through its hooks or plugin.
+func (c *Config) InjectEnabled(agent string) bool {
+	if o, ok := c.Agents[agent]; ok && o.Inject != nil {
+		return *o.Inject
+	}
+	return true
 }
 
 // Direction returns the agent's sync direction, defaulting to both.

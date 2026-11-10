@@ -265,6 +265,9 @@
 "已为 %@ 创建 worktree，在终端里运行：" = "Created a worktree for %@. Run this in Terminal:";
 "只读取会话" = "Reads sessions only";
 "Bridge 只读取这个 agent 的会话：它的进展和历史会同步给其他 agent，迁移到它会生成交接文档。" = "Bridge only reads this agent's sessions: its progress and history reach the other agents, and migrating to it creates a handoff document.";
+"自动接收其他 agent 的进展" = "Receive other agents' progress automatically";
+"让 DeepSeek Harness 自动接收其他 agent 的进展？" = "Let DeepSeek Harness receive other agents' progress automatically?";
+"注入的进展会写进 DeepSeek Harness 的会话日志。它默认会把会话日志上传给 DeepSeek，请先在它的 Settings → General 里关闭 “Upload Session Log when using the official model API”。" = "Injected progress is written to DeepSeek Harness's session logs, which it uploads to DeepSeek by default. First turn off “Upload Session Log when using the official model API” under its Settings → General.";
 "界面语言" = "Interface language";
 "跟随系统" = "Match System";
 "简体中文" = "简体中文";

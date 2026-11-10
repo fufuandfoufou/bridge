@@ -137,6 +137,7 @@ func (a *Adapter) Capabilities(v kit.Version) kit.Capabilities {
 		SessionRead:  true,
 		SessionWrite: common.VersionVerified(string(v), verifiedVersions) || versions.Allowed(ID, string(v)),
 		LiveTail:     true,
+		Hooks:        []kit.HookKind{kit.HookSessionStart, kit.HookPromptSubmit, kit.HookPreTool, kit.HookPostTool, kit.HookStop},
 		MCP:          true,
 		RulesFiles: []kit.PathSpec{
 			{Scope: model.ScopeProject, Path: "AGENTS.md", Format: kit.FormatSource},

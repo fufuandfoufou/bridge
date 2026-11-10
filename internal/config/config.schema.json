@@ -9,7 +9,10 @@
       "properties": { "enabled": { "type": "array", "items": { "type": "string" } } },
       "additionalProperties": {
         "type": "object",
-        "properties": { "direction": { "enum": ["both", "send-only", "receive-only"] } }
+        "properties": {
+          "direction": { "enum": ["both", "send-only", "receive-only"] },
+          "inject": { "type": "boolean" }
+        }
       }
     },
     "sync": {

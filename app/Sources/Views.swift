@@ -711,6 +711,7 @@ struct SettingsView: View {
     @State private var s: Settings?
     @State private var newExclude = ""
     @State private var confirmExtract = false
+    @State private var confirmInject: String?
 
     var body: some View {
         Group {
@@ -723,6 +724,12 @@ struct SettingsView: View {
             Button("开启") { set("memory.auto_extract", "true") }
         } message: {
             Text("开启后，脱敏后的对话文本会发送给 \(Names.agent(s?.extractor ?? "")) 背后的模型服务，并消耗你的额度。工具输出不会发送。")
+        }
+        .confirmationDialog("让 DeepSeek Harness 自动接收其他 agent 的进展？", isPresented: Binding(get: { confirmInject != nil }, set: { if !$0 { confirmInject = nil } })) {
+            Button("取消", role: .cancel) {}
+            Button("开启") { if let id = confirmInject { set("agents.\(id).inject", "true") } }
+        } message: {
+            Text("注入的进展会写进 DeepSeek Harness 的会话日志。它默认会把会话日志上传给 DeepSeek，请先在它的 Settings → General 里关闭 “Upload Session Log when using the official model API”。")
         }
     }
 
@@ -759,6 +766,12 @@ struct SettingsView: View {
                             Text("只发送").tag("send-only")
                             Text("只接收").tag("receive-only")
                         }.labelsHidden().fixedSize().disabled(!c.enabled.contains(a.id))
+                    }
+                    if c.enabled.contains(a.id) && c.directions[a.id] != "send-only" {
+                        Toggle("自动接收其他 agent 的进展", isOn: Binding(get: { c.injects?[a.id] ?? true }, set: { on in
+                            if on && a.id == "dsh" { confirmInject = a.id } else { set("agents.\(a.id).inject", on ? "true" : "false") }
+                        }))
+                        .font(.callout).padding(.leading, 20)
                     }
                 }
             }

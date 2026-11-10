@@ -133,9 +133,9 @@ Any command accepts `--set key=value`. Configuration has four layers: built-in d
 
 Real-client checks cover native migration and resume between Claude Code 2.1.317 and Codex CLI 0.144.1, resume on Codex 0.166.0-alpha.6, and hook injection in both directions. Both pi 1.5.1 and DeepSeek Harness 0.2.2-rc.1 have loaded text and tool history written by Bridge. DeepSeek also loaded appended history after the client itself had continued the session. The pi and DeepSeek checks use isolated directories and a local mock model endpoint.
 
-pi queries other agents' progress through MCP, and memories go into its global AGENTS.md.
+pi has no shell hooks. Connecting it installs an extension in `~/.pi/agent/extensions/` that forwards pi's session start, each prompt, tool calls and session end to Bridge, so pi receives progress and memory automatically like Claude Code and Codex, and file claims can warn or block its edits. Bridge's MCP server is registered too, for on-demand queries.
 
-DeepSeek Harness supports native migration in both directions and incremental updates to existing sessions. Writes use its default Zstandard storage format and respect the harness's kernel write lease. The CLI resume command is `dsh headless --session-id <ID> -`, which reads the next instruction from standard input. You can also replace `-` with a quoted question. DeepSeek hook and MCP integration remains pending.
+DeepSeek Harness supports native migration in both directions and incremental updates to existing sessions. Writes use its default Zstandard storage format and respect the harness's kernel write lease. The CLI resume command is `dsh headless --session-id <ID> -`, which reads the next instruction from standard input. You can also replace `-` with a quoted question. Connecting it adds a marked block to `$DSH_HOME/cordis.patch.yml`: Bridge's MCP server, and for verified versions a small plugin that puts other agents' progress into each step's runtime context. Your own rows in that file are left alone, and uninstalling removes only the block. Because DeepSeek Harness uploads its session logs by default, **receiving progress automatically is off for it by default**; turn it on under Settings → Agents (`agents.dsh.inject = true`). File claim blocking isn't supported for DeepSeek Harness.
 
 ## Status and limitations
 

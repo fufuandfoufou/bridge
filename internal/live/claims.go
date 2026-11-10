@@ -152,6 +152,7 @@ func (c *Claims) List(now time.Time) []Claim {
 func EditPaths(tool string, raw json.RawMessage, cwd, root string) []string {
 	var input struct {
 		FilePath string `json:"file_path"`
+		Path     string `json:"path"` // pi's edit and write
 		Command  string `json:"command"`
 		Patch    string `json:"patch"`
 	}
@@ -161,6 +162,9 @@ func EditPaths(tool string, raw json.RawMessage, cwd, root string) []string {
 	var paths []string
 	switch strings.ToLower(tool) {
 	case "edit", "write", "multiedit":
+		if input.FilePath == "" {
+			input.FilePath = input.Path
+		}
 		paths = append(paths, input.FilePath)
 	case "apply_patch":
 		patch := input.Command

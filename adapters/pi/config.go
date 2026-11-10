@@ -1,6 +1,7 @@
 package pi
 
 import (
+	"bridge/internal/fakellm"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -50,9 +51,15 @@ func writeJSON(path string, doc map[string]any) error {
 	return fsutil.SafeWrite(path, b.Bytes(), 0o600)
 }
 
-// InstallHooks implements Adapter. pi has no shell hooks; connecting it
-// registers bridge's MCP server so pi can query other agents' progress.
+// InstallHooks implements Adapter. pi has no shell hooks: connecting it
+// installs an extension that forwards pi's lifecycle events to bridge, and
+// registers bridge's MCP server for on-demand queries.
 func (a *Adapter) InstallHooks(ctx context.Context, cfg kit.HookConfig) error {
+	if cfg.Command != "" {
+		if err := installExtension(cfg.Command); err != nil {
+			return fmt.Errorf("install pi extension %s: %w", extensionPath(), err)
+		}
+	}
 	if len(cfg.MCPCommand) == 0 {
 		return nil
 	}
@@ -61,18 +68,17 @@ func (a *Adapter) InstallHooks(ctx context.Context, cfg kit.HookConfig) error {
 
 // UninstallHooks implements Adapter.
 func (a *Adapter) UninstallHooks(ctx context.Context) error {
+	if err := removeExtension(); err != nil {
+		return err
+	}
 	if _, err := os.Stat(mcpPath()); err != nil {
 		return nil
 	}
 	return a.WriteMCP(mcpPath(), nil, []string{"bridge"})
 }
 
-// HooksInstalled implements adapterkit.HookChecker: connected means bridge's
-// MCP server is registered.
-func (a *Adapter) HooksInstalled() bool {
-	s, err := a.ReadMCP(mcpPath())
-	return err == nil && s["bridge"].Command != ""
-}
+// HooksInstalled implements adapterkit.HookChecker: the extension is in place.
+func (a *Adapter) HooksInstalled() bool { return extensionInstalled() }
 
 var mcpFields = common.MCPFields{Command: "command", Args: "args", Env: "env", URL: "url", Headers: "headers"}
 
@@ -174,7 +180,7 @@ func probe(ctx context.Context, bin, marker string, events []model.Event) error 
 	if tmp, err = filepath.EvalSymlinks(tmp); err != nil {
 		return err
 	}
-	llm, err := common.StartFakeLLM()
+	llm, err := fakellm.Start()
 	if err != nil {
 		return err
 	}
