@@ -76,11 +76,14 @@ struct MenuPanel: View {
         }
     }
 
-    private func needsAttention(_ a: AgentStatus) -> Bool { !a.writable || (a.hooks && !a.hooksTrusted) }
+    private func needsAttention(_ a: AgentStatus) -> Bool { unverified(a) || (a.hooks && !a.hooksTrusted) }
+
+    private func unverified(_ a: AgentStatus) -> Bool { !a.writable && a.nativeWrite != false }
 
     private func summary(_ a: AgentStatus) -> String {
         if a.hooks && !a.hooksTrusted { return tr("hooks 信任待确认") }
-        if !a.writable { return tr("版本未验证") }
+        if unverified(a) { return tr("版本未验证") }
+        if a.nativeWrite == false { return tr("只读取会话") }
         return a.hooks ? tr("已接入") : tr("未接入")
     }
 

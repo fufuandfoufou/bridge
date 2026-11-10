@@ -5,6 +5,7 @@ go 1.27.3
 require (
 	github.com/BurntSushi/toml v1.6.0
 	github.com/fsnotify/fsnotify v1.10.1
+	github.com/klauspost/compress v1.18.0
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/spf13/cobra v1.10.2
 	modernc.org/sqlite v1.62.0

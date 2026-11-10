@@ -263,6 +263,8 @@
 "复制启动命令" = "Copy Start Command";
 "复制合并命令" = "Copy Merge Command";
 "已为 %@ 创建 worktree，在终端里运行：" = "Created a worktree for %@. Run this in Terminal:";
+"只读取会话" = "Reads sessions only";
+"Bridge 只读取这个 agent 的会话：它的进展和历史会同步给其他 agent，迁移到它会生成交接文档。" = "Bridge only reads this agent's sessions: its progress and history reach the other agents, and migrating to it creates a handoff document.";
 "界面语言" = "Interface language";
 "跟随系统" = "Match System";
 "简体中文" = "简体中文";

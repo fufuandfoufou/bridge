@@ -147,7 +147,7 @@ struct WorktreesView: View {
     }
 
     private func startCommand(_ agent: String, _ path: String) -> String {
-        let bin = ["claude-code": "claude", "codex": "codex"][agent]
+        let bin = ["claude-code": "claude", "codex": "codex", "pi": "pi", "dsh": "dsh web"][agent]
         return "cd \(shellQuote(path))" + (bin.map { " && \($0)" } ?? "")
     }
 

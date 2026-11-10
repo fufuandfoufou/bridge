@@ -219,7 +219,10 @@ struct AgentCard: View {
     }
 
     @ViewBuilder private var versionNotice: some View {
-        if !agent.writable {
+        if agent.nativeWrite == false {
+            Label("Bridge 只读取这个 agent 的会话：它的进展和历史会同步给其他 agent，迁移到它会生成交接文档。", systemImage: "info.circle")
+                .font(.callout).foregroundStyle(.secondary)
+        } else if !agent.writable {
             VStack(alignment: .leading, spacing: 8) {
                 Label(agent.versionState == "failed" ? "此版本未通过自动检测，迁移会生成交接文档。" : "此版本尚未验证，迁移会生成交接文档。", systemImage: "exclamationmark.triangle")
                     .foregroundStyle(.orange).font(.callout)

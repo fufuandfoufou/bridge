@@ -87,6 +87,8 @@ struct AgentStatus: Decodable, Identifiable {
     let enabled: Bool
     let direction: String
     let writable: Bool
+    /// False for agents bridge only reads; they have no version to verify.
+    let nativeWrite: Bool?
     let versionState: String
     let versionError: String
     let hooks: Bool
@@ -260,6 +262,8 @@ enum Names {
         switch id {
         case "claude-code": return "Claude Code"
         case "codex": return "Codex"
+        case "pi": return "pi"
+        case "dsh": return "DeepSeek Harness"
         default: return id
         }
     }

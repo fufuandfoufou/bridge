@@ -91,6 +91,10 @@ func apiCmd() *cobra.Command {
 			if hc, ok := a.(kit.HookChecker); ok {
 				hooks = hc.HooksInstalled()
 			}
+			// Agents bridge never writes natively (it only reads them) have no
+			// version to verify.
+			_, probes := a.(kit.VersionProber)
+			native := probes || caps.SessionWrite
 			trusted := true
 			if tc, ok := a.(kit.HookTrustChecker); ok && hooks {
 				trusted = tc.HooksTrusted()
@@ -106,7 +110,7 @@ func apiCmd() *cobra.Command {
 				versionState = "builtin"
 			}
 			agents = append(agents, map[string]any{"id": a.ID(), "version_state": versionState, "version_error": versionError, "installed": in.Installed, "version": string(in.Version),
-				"enabled": cfg.AgentEnabled(a.ID()), "direction": cfg.Direction(a.ID()), "writable": caps.SessionWrite, "hooks": hooks, "hooks_trusted": trusted,
+				"enabled": cfg.AgentEnabled(a.ID()), "direction": cfg.Direction(a.ID()), "writable": caps.SessionWrite, "native_write": native, "hooks": hooks, "hooks_trusted": trusted,
 				"handoff": eff.Handoff, "live": eff.Live, "memory": eff.Memory, "sessions": s.Sessions, "events": s.Events, "last": last})
 		}
 		return map[string]any{"daemon": daemonOnline(), "paused": fsutil.Paused(), "agents": agents, "warnings": cfg.Warnings}, nil

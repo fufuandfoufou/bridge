@@ -36,9 +36,10 @@ var messagesEN = map[string]string{
 	"MCP 配置同步已关闭（sync.mcp_configs）": "MCP configuration sync is off (sync.mcp_configs)", "Claude Code 的 MCP 配置不支持 cwd": "Claude Code's MCP configuration doesn't support cwd",
 	"Codex 不支持 SSE 传输的 MCP server": "Codex doesn't support MCP servers over SSE",
 	"记忆同步已关闭（sync.memory），不能导入":    "Memory sync is off (sync.memory), so nothing can be imported", "同步已暂停，恢复后再导入": "Sync is paused. Resume it before importing.",
-	"已有一个历史导入正在进行": "An import is already running",
-	"请先选择项目目录":     "Choose a project folder first",
-	"任务需要先选择项目目录":  "Choose a project folder for the task first", "任务标题不能为空": "Task title can't be empty", "not found": "Not found",
+	"已有一个历史导入正在进行":                                "An import is already running",
+	"请先选择项目目录":                                    "Choose a project folder first",
+	"pi 只支持 stdio 和 streamable HTTP 的 MCP server": "pi supports only stdio and streamable HTTP MCP servers", "pi 的 MCP 配置不支持 cwd": "pi's MCP configuration doesn't support cwd",
+	"任务需要先选择项目目录": "Choose a project folder for the task first", "任务标题不能为空": "Task title can't be empty", "not found": "Not found",
 	"数据库可打开": "Database opens", "数据库权限为 0600": "Database permissions are 0600", "守护进程在线": "Daemon is online",
 }
 

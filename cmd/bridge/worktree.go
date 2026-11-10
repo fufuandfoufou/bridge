@@ -157,7 +157,7 @@ func addWorktree(ctx context.Context, dir, agent, base, path string) (worktree.W
 }
 
 func startHint(agent, path string) string {
-	bin := map[string]string{"claude-code": "claude", "codex": "codex"}[agent]
+	bin := map[string]string{"claude-code": "claude", "codex": "codex", "pi": "pi", "dsh": "dsh web"}[agent]
 	if bin == "" {
 		return "cd " + path
 	}

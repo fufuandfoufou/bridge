@@ -128,8 +128,12 @@ Any command accepts `--set key=value`. Configuration has four layers: built-in d
 | --- | --- | --- |
 | Claude Code | 2.1.x | Automatic check or manual enable |
 | Codex | 0.144.x, 0.166.x | Automatic check or manual enable |
+| pi | 1.5.x | Automatic check or manual enable |
+| DeepSeek Harness | Sessions read only | Migrating to it creates a handoff document |
 
-Verified on real clients: native migration and resume between Claude Code 2.1.317 and Codex CLI 0.144.1, resume on Codex 0.166.0-alpha.6, and hook injection in both directions.
+Verified on real clients: native migration and resume between Claude Code 2.1.317 and Codex CLI 0.144.1, resume on Codex 0.166.0-alpha.6, and hook injection in both directions; pi 1.5.1 loading sessions bridge wrote, tool-call history included; reading DeepSeek Harness 0.2.2-rc.1 sessions.
+
+pi has no shell hooks: once connected it queries other agents' progress through MCP, and memories go into its global AGENTS.md. DeepSeek Harness is still a developer preview with a changing session format, so bridge only reads its sessions: its progress and history reach the other agents, and migrating to it creates a handoff document.
 
 ## Status and limitations
 
