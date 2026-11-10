@@ -63,7 +63,7 @@ Backups before writing, temp file plus atomic rename, read-back verification, an
 | Session migration | Index and filter sessions, native migration, tool mapping, trimming long sessions, handoff-document fallback, two-way updates after migrating |
 | Live collaboration | Incremental collection, hook-injected progress, MCP queries (`session_list`, `session_events`, `memory_search`), file claim warnings, notes on other workspace changes |
 | Task board | Shared per-project tasks via `task_add` / `task_claim` / `task_update` / `task_done`; claims are atomic and only the holder can update a task; new sessions see unfinished tasks |
-| Memory | Global preferences and project memory, optional automatic extraction, supersession, review, forget without re-extraction |
+| Memory | Global preferences and project memory, optional automatic extraction, import from past sessions, supersession, review, forget without re-extraction |
 | File sync | One source for rules and skills, symlinks or generated copies, drift detection, adopt or overwrite; MCP server configuration synced entry by entry (off by default) |
 | Configuration | Four merged layers, per-category and per-agent switches, sync direction, `why` explains where a value came from |
 | Desktop app | Native macOS window and menu bar: status, migration, pause syncing, memory and settings |
@@ -114,6 +114,7 @@ Build the desktop app:
 | `plan` / `sync` | Preview / apply rule and skill sync |
 | `why <path-or-memory-id>` | Explain a sync result and the config behind it |
 | `memory list/review/add/edit/forget/extract` | Manage memory |
+| `memory import [--all] [--since 90d] [--dry-run]` | Extract memories from past sessions: estimates first, sends only after you confirm, and results wait for review |
 | `task list/add/reopen/delete` | Manage the current project's task board |
 | `adapter list/trust/test` | External adapters and conformance tests |
 
@@ -138,7 +139,8 @@ This is an early project. Please try it on sessions you don't depend on first.
 - File claims can warn or block, but only cover the edit tools of connected agents: shell commands and manual edits aren't protected, and nothing is blocked while the daemon is offline.
 - The daemon watches the folders of git projects active in the last two hours (skipping hidden folders, node_modules, vendor, dist, build, target and similar) and tells agents about file changes from other sources. The source is only a guess: a change is marked "probably from" an agent when that agent's edit tool touched the same file around then, and unknown otherwise.
 - MCP config sync is off by default; turn on `sync.mcp_configs` in the config or in Settings. The sources are `~/.config/bridge/mcp.toml` (global) and the project's `.agents/mcp.toml`, written entry by entry into `~/.claude.json`, `.mcp.json`, and Codex's `config.toml`. Existing servers with the same name and entries edited by hand are never overwritten. Codex reads `.codex/config.toml` only in trusted projects and doesn't support the SSE transport. See [docs/mcp-sync.md](docs/mcp-sync.md).
-- Worktree mode and history import aren't implemented.
+- Importing past sessions sends redacted conversation text to the extracting agent and uses your quota. Before it starts, you see the number of sessions and calls and a token estimate. Copies created by migration aren't extracted twice, and every result waits for review. An interrupted import continues where it stopped.
+- Worktree mode isn't implemented.
 - macOS only for now.
 
 ## Docs and contributing

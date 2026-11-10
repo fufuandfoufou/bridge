@@ -433,6 +433,31 @@ func apiCmd() *cobra.Command {
 	add("task-delete <id>", cobra.ExactArgs(1), withStore(func(_ context.Context, st *store.Store, _ *config.Config, a []string) (any, error) {
 		return nil, st.DeleteTask(a[0])
 	}))
+	var isc importScope
+	ip := add("memory-import-plan", cobra.NoArgs, func(ctx context.Context, _ []string) (any, error) {
+		st, err := openStore()
+		if err != nil {
+			return nil, err
+		}
+		defer st.Close()
+		p, _, err := planImport(ctx, st, isc)
+		if len(p.Items) > 200 {
+			p.Items = p.Items[:200]
+		}
+		return p, err
+	})
+	isc.flags(ip)
+	is := add("memory-import-start", cobra.NoArgs, func(context.Context, []string) (any, error) {
+		if fsutil.Paused() {
+			return nil, errors.New("同步已暂停，恢复后再导入")
+		}
+		return nil, startImport(isc)
+	})
+	isc.flags(is)
+	add("memory-import-status", cobra.NoArgs, func(context.Context, []string) (any, error) {
+		return memory.LoadImportStatus()
+	})
+	add("memory-import-cancel", cobra.NoArgs, func(context.Context, []string) (any, error) { return nil, cancelImport() })
 	add("resume", cobra.NoArgs, func(context.Context, []string) (any, error) { return nil, fsutil.SetPaused(false) })
 
 	add("ensure-daemon", cobra.NoArgs, func(context.Context, []string) (any, error) {

@@ -286,7 +286,9 @@ func syncFiles(plan func() ([]filesync.Action, error), o filesync.Options) (file
 	// The first pass explains what adopting could not resolve; the second
 	// adds anything still waiting that the first did not cover.
 	seen := map[string]bool{}
-	key := func(a filesync.Action) string { return a.Category + "\x00" + a.Agent + "\x00" + a.Target + "\x00" + a.Name }
+	key := func(a filesync.Action) string {
+		return a.Category + "\x00" + a.Agent + "\x00" + a.Target + "\x00" + a.Name
+	}
 	for _, a := range r.Blocked {
 		seen[key(a)] = true
 	}
@@ -782,7 +784,7 @@ func memoryCmd() *cobra.Command {
 		fmt.Printf("新增 %d 条记忆\n", n)
 		return refresh(ctx, st, cfg)
 	})}
-	c.AddCommand(list, review, add, edit, forget, extract)
+	c.AddCommand(list, review, add, edit, forget, extract, memoryImportCmd())
 	return c
 }
 

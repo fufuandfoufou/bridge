@@ -565,6 +565,7 @@ struct MemoryView: View {
     @State private var adding = false
     @State private var editing: MemoryItem?
     @State private var confirmForget = false
+    @State private var importing = false
 
     private var rows: [MemoryItem] { items.filter { $0.status == filter } }
     private var pending: Int { items.filter { $0.status == "pending" }.count }
@@ -572,7 +573,7 @@ struct MemoryView: View {
     var body: some View {
         Group {
             if rows.isEmpty {
-                ContentUnavailableMessage(title: filter == "pending" ? "待审核区是空的" : "还没有记忆", detail: "可以手动添加，或在设置里开启自动提取。")
+                ContentUnavailableMessage(title: filter == "pending" ? "待审核区是空的" : "还没有记忆", detail: "可以手动添加、从历史会话导入，或在设置里开启自动提取。")
             } else {
                 Table(rows, selection: $selection) {
                     TableColumn("内容") { Text($0.content).lineLimit(2).help($0.content) }
@@ -595,6 +596,7 @@ struct MemoryView: View {
             Button("编辑…") { editing = rows.first { $0.id == selection } }
                 .disabled(selection == nil || filter == "superseded")
             Button("删除…", role: .destructive) { confirmForget = true }.disabled(selection == nil)
+            Button("导入历史…") { importing = true }
             Button { adding = true } label: { Label("添加", systemImage: "plus") }
         }
         .confirmationDialog("删除这条记忆？", isPresented: $confirmForget) {
@@ -603,6 +605,7 @@ struct MemoryView: View {
         } message: { Text("删除后不可恢复，并且不会再被自动提取。") }
         .sheet(isPresented: $adding, onDismiss: reload) { AddMemorySheet(dir: dir) }
         .sheet(item: $editing, onDismiss: reload) { EditMemorySheet(item: $0) }
+        .sheet(isPresented: $importing, onDismiss: reload) { ImportHistorySheet(dir: dir, onReview: { filter = "pending" }) }
         .task { reload() }
     }
 
