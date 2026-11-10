@@ -1307,3 +1307,42 @@ func TestLOCK_FileClaims(t *testing.T) {
 		}
 	})
 }
+
+// Codex desktop threads are paginated: appended turns use Codex's own turn
+// structure, and reading them back yields each message once.
+func TestSessionSyncIntoPaginatedCodexThread(t *testing.T) {
+	e, src, cp := linkedPair(t)
+	lines := strings.SplitAfter(read(t, cp), "\n")
+	var meta map[string]any
+	must(t, json.Unmarshal([]byte(lines[0]), &meta))
+	meta["payload"].(map[string]any)["history_mode"] = "paginated"
+	b, _ := json.Marshal(meta)
+	lines[0] = string(b) + "\n"
+	write(t, cp, strings.Join(lines, ""))
+	age(t, cp)
+	appendFile(t, src, claudeLines(e.proj, srcID, msg{"user", "分页后续问题"}, msg{"assistant", []any{text("分页后续回答")}}))
+	if out := syncAPI(e); !strings.Contains(out, `"state":"synced"`) {
+		t.Fatal(out)
+	}
+	tail := read(t, cp)[len(strings.Join(lines, "")):]
+	for _, want := range []string{`"task_started"`, `"UserMessage"`, `"AgentMessage"`, `"task_complete"`, `"ordinal"`} {
+		if !strings.Contains(tail, want) {
+			t.Errorf("appended turn lacks %s:\n%s", want, tail)
+		}
+	}
+	if strings.Contains(tail, `"user_message"`) {
+		t.Error("legacy events written into a paginated thread")
+	}
+	n := 0
+	for _, x := range texts(readRollout(t, cp), "") {
+		if x == "分页后续问题" || x == "分页后续回答" {
+			n++
+		}
+	}
+	if n != 2 {
+		t.Errorf("read back %d of the 2 appended messages", n)
+	}
+	if out := syncAPI(e); !strings.Contains(out, `"state":"current"`) {
+		t.Errorf("second pass: %s", out)
+	}
+}

@@ -1170,14 +1170,23 @@ func historyMode(ctx context.Context, id string) (string, error) {
 	return mode, err
 }
 
-// RenderAppend implements adapterkit.SessionAppender. Only flat rollouts can
-// grow by appending: paginated threads keep history pages Codex manages.
+// RenderAppend implements adapterkit.SessionAppender. Both storage modes
+// grow by appending to the rollout: a paginated thread's history pages are an
+// index Codex builds from the rollout, continuing from where it stopped, so
+// appended turns only need the structure Codex writes itself.
 func (a *Adapter) RenderAppend(ctx context.Context, ref kit.SessionRef, events []model.Event) ([]byte, error) {
 	mode, err := historyMode(ctx, ref.NativeID)
 	if err != nil {
 		return nil, err
 	}
-	if mode != "" && mode != "legacy" {
+	if mode == "" {
+		mode = rolloutMode(ref.Path)
+	}
+	switch mode {
+	case "paginated":
+		return renderPaginated(ref, lastOrdinal(ref.Path), time.Now().UTC(), events)
+	case "", "legacy":
+	default:
 		return nil, kit.ErrNotSupported
 	}
 	last := 0

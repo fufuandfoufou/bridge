@@ -135,7 +135,6 @@ This is an early project. Please try it on sessions you don't depend on first.
 
 - Migration isn't a byte-for-byte copy: reasoning isn't carried over, unmappable tools become text, and very long sessions are compressed.
 - Appended history takes effect when a session is reopened; a running client won't notice it. Codex has no registry of running threads, so "in use" is inferred from recent file changes.
-- Codex's native paginated sessions can't be appended to yet, only copied into a new session.
 - File claims can warn or block, but only cover the edit tools of connected agents: shell commands and manual edits aren't protected, and nothing is blocked while the daemon is offline.
 - The daemon watches the folders of git projects active in the last two hours (skipping hidden folders, node_modules, vendor, dist, build, target and similar) and tells agents about file changes from other sources. The source is only a guess: a change is marked "probably from" an agent when that agent's edit tool touched the same file around then, and unknown otherwise.
 - MCP config sync is off by default; turn on `sync.mcp_configs` in the config or in Settings. The sources are `~/.config/bridge/mcp.toml` (global) and the project's `.agents/mcp.toml`, written entry by entry into `~/.claude.json`, `.mcp.json`, and Codex's `config.toml`. Existing servers with the same name and entries edited by hand are never overwritten. Codex reads `.codex/config.toml` only in trusted projects and doesn't support the SSE transport. See [docs/mcp-sync.md](docs/mcp-sync.md).
