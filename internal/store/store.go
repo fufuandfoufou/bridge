@@ -67,6 +67,17 @@ CREATE TABLE tasks(
   status TEXT NOT NULL, owner TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '',
   created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL);
 CREATE INDEX tasks_project ON tasks(project_id, status);
+`, `
+-- Earlier pi and dsh adapters retained reasoning in raw native records.
+-- Their canonical events are safe and remain usable without those records.
+UPDATE events SET native_ref=NULL
+  WHERE native_ref IS NOT NULL AND session_id IN
+    (SELECT id FROM sessions WHERE agent IN ('pi', 'dsh'));
+`, `
+-- Repair dsh records collected before provider streams and replay state were removed.
+UPDATE events SET native_ref=NULL
+  WHERE native_ref IS NOT NULL AND session_id IN
+    (SELECT id FROM sessions WHERE agent='dsh');
 `}
 
 // Store wraps the database.
@@ -122,6 +133,11 @@ func (s *Store) migrate() error {
 		if err := tx.Commit(); err != nil {
 			return err
 		}
+	}
+	if v < len(migrations) {
+		// Flush privacy repairs and discard WAL frames with the old raw data.
+		_, err := s.db.Exec(`PRAGMA wal_checkpoint(TRUNCATE)`)
+		return err
 	}
 	return nil
 }

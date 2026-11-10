@@ -129,11 +129,13 @@ Any command accepts `--set key=value`. Configuration has four layers: built-in d
 | Claude Code | 2.1.x | Automatic check or manual enable |
 | Codex | 0.144.x, 0.166.x | Automatic check or manual enable |
 | pi | 1.5.x | Automatic check or manual enable |
-| DeepSeek Harness | Sessions read only | Migrating to it creates a handoff document |
+| DeepSeek Harness | 0.2.2-rc.1 | Automatic check or manual enable |
 
-Verified on real clients: native migration and resume between Claude Code 2.1.317 and Codex CLI 0.144.1, resume on Codex 0.166.0-alpha.6, and hook injection in both directions; pi 1.5.1 loading sessions bridge wrote, tool-call history included; reading DeepSeek Harness 0.2.2-rc.1 sessions.
+Real-client checks cover native migration and resume between Claude Code 2.1.317 and Codex CLI 0.144.1, resume on Codex 0.166.0-alpha.6, and hook injection in both directions. Both pi 1.5.1 and DeepSeek Harness 0.2.2-rc.1 have loaded text and tool history written by Bridge. DeepSeek also loaded appended history after the client itself had continued the session. The pi and DeepSeek checks use isolated directories and a local mock model endpoint.
 
-pi has no shell hooks: once connected it queries other agents' progress through MCP, and memories go into its global AGENTS.md. DeepSeek Harness is still a developer preview with a changing session format, so bridge only reads its sessions: its progress and history reach the other agents, and migrating to it creates a handoff document.
+pi queries other agents' progress through MCP, and memories go into its global AGENTS.md.
+
+DeepSeek Harness supports native migration in both directions and incremental updates to existing sessions. Writes use its default Zstandard storage format and respect the harness's kernel write lease. The CLI resume command is `dsh headless --session-id <ID> -`, which reads the next instruction from standard input. You can also replace `-` with a quoted question. DeepSeek hook and MCP integration remains pending.
 
 ## Status and limitations
 

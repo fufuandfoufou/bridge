@@ -129,11 +129,13 @@ go build -o bin/bridge ./cmd/bridge
 | Claude Code | 2.1.x | 自动检测，或手动启用 |
 | Codex | 0.144.x、0.166.x | 自动检测，或手动启用 |
 | pi | 1.5.x | 自动检测，或手动启用 |
-| DeepSeek Harness | 只读取会话 | 迁移到它时生成交接文档 |
+| DeepSeek Harness | 0.2.2-rc.1 | 自动检测，或手动启用 |
 
-已在真实客户端上验证过的：Claude Code 2.1.317 ↔ Codex CLI 0.144.1 的原生迁移和恢复，Codex 0.166.0-alpha.6 的恢复，以及两个方向的 hook 注入；pi 1.5.1 加载 Bridge 写入的会话（含工具调用历史）；DeepSeek Harness 0.2.2-rc.1 的会话读取。
+已在真实客户端上验证过的包括 Claude Code 2.1.317 ↔ Codex CLI 0.144.1 的原生迁移和恢复，Codex 0.166.0-alpha.6 的恢复，以及两个方向的 hook 注入。pi 1.5.1 和 DeepSeek Harness 0.2.2-rc.1 均已验证能加载 Bridge 写入的文本与工具历史。DeepSeek 还验证了客户端继续会话后，Bridge 追加的新内容能在再次恢复时进入模型上下文。pi 与 DeepSeek 的兼容性检测使用隔离目录和本机模拟模型服务。
 
-pi 没有 shell hooks，接入后通过 MCP 查询其他 agent 的进展，记忆写入它的全局 AGENTS.md。DeepSeek Harness 仍是开发者预览版，会话格式还在变化，Bridge 只读取它的会话：它的进展和历史会同步给其他 agent，迁移到它时生成交接文档。
+pi 没有 shell hooks，接入后通过 MCP 查询其他 agent 的进展，记忆写入它的全局 AGENTS.md。
+
+DeepSeek Harness 支持原生迁入、迁出及已有会话的增量更新。写入采用默认的 Zstandard 会话格式，更新时遵守 Harness 的内核写锁。CLI 恢复命令使用 `dsh headless --session-id <ID> -`，从标准输入读取下一条指令，也可以把 `-` 换成带引号的问题。DeepSeek 的 hook 和 MCP 接入目前尚未实现。
 
 ## 当前状态与局限
 
