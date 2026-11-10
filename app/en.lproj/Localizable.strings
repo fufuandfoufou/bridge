@@ -12,6 +12,8 @@
 "添加" = "Add";
 "移除" = "Remove";
 "删除" = "Delete";
+"收入公共目录" = "Move to Shared";
+"去重" = "Deduplicate";
 "删除…" = "Delete…";
 "编辑…" = "Edit…";
 "通过" = "Approve";

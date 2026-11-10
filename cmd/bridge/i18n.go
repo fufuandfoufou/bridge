@@ -40,6 +40,9 @@ var messagesEN = map[string]string{
 	"请先选择项目目录":                                    "Choose a project folder first",
 	"pi 只支持 stdio 和 streamable HTTP 的 MCP server": "pi supports only stdio and streamable HTTP MCP servers", "pi 的 MCP 配置不支持 cwd": "pi's MCP configuration doesn't support cwd",
 	"任务需要先选择项目目录": "Choose a project folder for the task first", "任务标题不能为空": "Task title can't be empty", "not found": "Not found",
+	"公共目录里只是指向它的软链接，收入公共目录": "The shared directory only links to it; will move it there", "公共目录里的同名项是失效的软链接": "The same name in the shared directory is a broken symlink",
+	"公共目录里有同名文件": "The shared directory has a file with this name", "内容与公共目录相同，替换为软链接": "Same as in the shared directory; will replace it with a symlink",
+	"与公共目录内容相同，删除重复的副本": "Same as in the shared directory; will remove the duplicate", "已以公共目录的版本为准，本地副本已备份": "Kept the shared version; the local copy was backed up",
 	"数据库可打开": "Database opens", "数据库权限为 0600": "Database permissions are 0600", "守护进程在线": "Daemon is online",
 }
 
@@ -63,6 +66,9 @@ var patternsEN = []struct {
 	{regexp.MustCompile(`^已把 (.*) 的 (\d+) 条新内容更新到 (.*)。两边都有新内容，已以 (.*) 为准；(.*) 自己的新内容保留在原处，不会同步给 (.*)。$`), "Updated $3 with $2 new items from $1. Both sides had changed, so $4 was used; the new content in $5 stays there and isn't sent to $6."},
 	{regexp.MustCompile(`^agent 同步方向为 (.*)，不接收同步$`), "Agent direction is $1, so it doesn't receive syncs"},
 	{regexp.MustCompile(`^规则源不存在，但这里已有内容；可用 bridge sync --adopt (.*) 把它作为源$`), "No rule source, but this file has content; use bridge sync --adopt $1 to make it the source"},
+	{regexp.MustCompile(`^只在 (.*) 中，收入公共目录$`), "Only in $1; will move it to the shared directory"},
+	{regexp.MustCompile(`^与公共目录中的同名 skill 内容不同；合回源以 (.*) 的为准，或以源为准覆盖$`), "Differs from the skill of the same name in the shared directory. Merge back to keep $1's version, or overwrite it from the source."},
+	{regexp.MustCompile(`^已以 (.*) 的版本为准，公共目录原版本已备份$`), "Kept $1's version; the shared one was backed up"},
 	{regexp.MustCompile(`^格式未经验证（(.*)），不同步$`), "Unverified format ($1); not synced"},
 	{regexp.MustCompile(`^副本被手工修改（hash 不符）.*$`), "The copy was edited by hand (hash mismatch)"},
 	{regexp.MustCompile(`^读取现有会话失败：(.*)$`), "Couldn't read an existing session: $1"},

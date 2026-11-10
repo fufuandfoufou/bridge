@@ -39,6 +39,9 @@ type PathSpec struct {
 	Scope  string `json:"scope"` // global | project
 	Path   string `json:"path"`
 	Format string `json:"format,omitempty"`
+	// Collect is the agent's own skill directory when it reads the shared one
+	// (Format source): skills found only there move into the shared one.
+	Collect string `json:"collect,omitempty"`
 }
 
 // ToolMapping pairs a canonical tool name with the native name.
