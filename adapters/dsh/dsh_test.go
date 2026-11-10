@@ -1,6 +1,7 @@
 package dsh
 
 import (
+	"bridge/internal/fakellm"
 	"bytes"
 	"context"
 	"os"
@@ -12,7 +13,6 @@ import (
 
 	"github.com/klauspost/compress/zstd"
 
-	"bridge/adapters/internal/common"
 	"bridge/internal/model"
 	kit "bridge/pkg/adapterkit"
 )
@@ -120,7 +120,7 @@ func TestRealHarness(t *testing.T) {
 	if err != nil {
 		t.Skip("dsh is not installed")
 	}
-	llm, err := common.StartFakeLLM()
+	llm, err := fakellm.Start()
 	if err != nil {
 		t.Fatal(err)
 	}

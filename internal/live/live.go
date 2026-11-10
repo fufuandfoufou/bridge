@@ -206,7 +206,7 @@ func (s *Service) load(agent, cwd string) (*config.Config, model.Project, bool, 
 	if err != nil {
 		return nil, model.Project{}, false, err
 	}
-	if m.Excluded(cwd) || !cfg.CanReceive(agent) {
+	if m.Excluded(cwd) || !cfg.CanReceive(agent) || !cfg.InjectEnabled(agent) {
 		return cfg, model.Project{}, false, nil
 	}
 	return cfg, project.Identify(cwd), true, nil

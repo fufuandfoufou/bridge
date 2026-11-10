@@ -57,9 +57,10 @@ func TestE5_PiAdapter(t *testing.T) {
 	if s := e.run("", "api", "status").out; !strings.Contains(s, `"id":"pi"`) {
 		t.Errorf("status: %s", s)
 	}
-	must(t, a.InstallHooks(context.Background(), kit.HookConfig{MCPCommand: []string{"/x/bridge", "mcp"}}))
-	if !a.HooksInstalled() || !strings.Contains(read(t, filepath.Join(e.home, ".pi/agent/mcp.json")), "/x/bridge") {
-		t.Error("bridge MCP not registered for pi")
+	must(t, a.InstallHooks(context.Background(), kit.HookConfig{Command: "/x/bridge", MCPCommand: []string{"/x/bridge", "mcp"}}))
+	if !a.HooksInstalled() || !strings.Contains(read(t, filepath.Join(e.home, ".pi/agent/mcp.json")), "/x/bridge") ||
+		!strings.Contains(read(t, filepath.Join(e.home, ".pi/agent/extensions/bridge.js")), `"/x/bridge"`) {
+		t.Error("bridge's extension and MCP server not both registered for pi")
 	}
 	must(t, a.UninstallHooks(context.Background()))
 	if a.HooksInstalled() {

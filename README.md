@@ -133,9 +133,9 @@ go build -o bin/bridge ./cmd/bridge
 
 已在真实客户端上验证过的包括 Claude Code 2.1.317 ↔ Codex CLI 0.144.1 的原生迁移和恢复，Codex 0.166.0-alpha.6 的恢复，以及两个方向的 hook 注入。pi 1.5.1 和 DeepSeek Harness 0.2.2-rc.1 均已验证能加载 Bridge 写入的文本与工具历史。DeepSeek 还验证了客户端继续会话后，Bridge 追加的新内容能在再次恢复时进入模型上下文。pi 与 DeepSeek 的兼容性检测使用隔离目录和本机模拟模型服务。
 
-pi 没有 shell hooks，接入后通过 MCP 查询其他 agent 的进展，记忆写入它的全局 AGENTS.md。
+pi 没有 shell hooks。接入时 Bridge 会在 `~/.pi/agent/extensions/` 安装一个扩展，把 pi 的会话开始、每次发消息、工具调用前后和会话结束转给 Bridge，因此 pi 和 Claude Code、Codex 一样能自动收到进展和记忆，文件认领也能提醒或拦截；同时注册 Bridge 的 MCP 供按需查询。
 
-DeepSeek Harness 支持原生迁入、迁出及已有会话的增量更新。写入采用默认的 Zstandard 会话格式，更新时遵守 Harness 的内核写锁。CLI 恢复命令使用 `dsh headless --session-id <ID> -`，从标准输入读取下一条指令，也可以把 `-` 换成带引号的问题。DeepSeek 的 hook 和 MCP 接入目前尚未实现。
+DeepSeek Harness 支持原生迁入、迁出及已有会话的增量更新。写入采用默认的 Zstandard 会话格式，更新时遵守 Harness 的内核写锁。CLI 恢复命令使用 `dsh headless --session-id <ID> -`，从标准输入读取下一条指令，也可以把 `-` 换成带引号的问题。接入时，Bridge 会在 `$DSH_HOME/cordis.patch.yml` 中加入一段带标记的配置：接入 Bridge 的 MCP，并为已验证的版本加载一个小插件，在每轮请求前把其他 agent 的进展放入运行时上下文。文件中你自己的配置不受影响，卸载时只移除这段。由于 DeepSeek Harness 默认会上传会话日志，**它自动接收进展默认关闭**，可在设置的 Agent 一栏为它开启（`agents.dsh.inject = true`）。文件认领拦截目前不支持 DeepSeek Harness。
 
 ## 当前状态与局限
 

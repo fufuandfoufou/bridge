@@ -1,6 +1,7 @@
 package dsh
 
 import (
+	"bridge/internal/fakellm"
 	"context"
 	"errors"
 	"fmt"
@@ -38,7 +39,7 @@ func probe(ctx context.Context, bin string, events []model.Event, marker string)
 	if tmp, err = filepath.EvalSymlinks(tmp); err != nil {
 		return err
 	}
-	llm, err := common.StartFakeLLM()
+	llm, err := fakellm.Start()
 	if err != nil {
 		return err
 	}

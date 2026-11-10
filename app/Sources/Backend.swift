@@ -255,6 +255,8 @@ struct Settings: Decodable {
     var redact: [String]
     var enabled: [String]
     var directions: [String: String]
+    /// Whether each agent receives other agents' progress automatically.
+    var injects: [String: Bool]?
 }
 
 enum Names {

@@ -509,10 +509,14 @@ func apiCmd() *cobra.Command {
 		for id := range cfg.Agents {
 			dirs[id] = cfg.Direction(id)
 		}
+		injects := map[string]bool{}
+		for _, a := range registry(cfg).All() {
+			injects[a.ID()] = cfg.InjectEnabled(a.ID())
+		}
 		return map[string]any{"sessions": cfg.Sync.Sessions, "memory": cfg.Sync.Memory, "global_memory": cfg.Sync.GlobalMemory, "project_memory": cfg.Sync.ProjectMemory, "rules": cfg.Sync.Rules, "skills": cfg.Sync.Skills.Enabled, "mcp_configs": cfg.Sync.MCPConfigs, "mcp_exclude": orEmptyS(cfg.Sync.MCPExclude),
 			"auto_extract": cfg.Memory.AutoExtract, "extractor": cfg.Memory.Extractor, "inject_on_prompt": cfg.Live.InjectOnPrompt,
 			"inject_token_budget": cfg.Live.InjectTokenBudget, "conflict_policy": cfg.Live.ConflictPolicy, "keep_recent_turns": cfg.Handoff.KeepRecentTurns,
-			"exclude_projects": orEmptyS(cfg.Privacy.ExcludeProjects), "include_projects": orEmptyS(cfg.Privacy.IncludeProjects), "exclude_files": orEmptyS(cfg.Sync.ExcludeFiles), "exclude_skills": orEmptyS(cfg.Sync.Skills.Exclude), "redact": orEmptyS(cfg.Privacy.Redact), "enabled": orEmptyS(cfg.Enabled), "directions": dirs}, nil
+			"exclude_projects": orEmptyS(cfg.Privacy.ExcludeProjects), "include_projects": orEmptyS(cfg.Privacy.IncludeProjects), "exclude_files": orEmptyS(cfg.Sync.ExcludeFiles), "exclude_skills": orEmptyS(cfg.Sync.Skills.Exclude), "redact": orEmptyS(cfg.Privacy.Redact), "enabled": orEmptyS(cfg.Enabled), "directions": dirs, "injects": injects}, nil
 	})
 	cs := add("config-set", cobra.NoArgs, func(context.Context, []string) (any, error) { return nil, setConfig(key, value) })
 	cs.Flags().StringVar(&key, "key", "", "dotted key")
@@ -534,7 +538,7 @@ func orEmptyS(a []string) []string {
 	return a
 }
 
-var settableKey = regexp.MustCompile(`^(sync\.(sessions|memory|global_memory|project_memory|rules|exclude_files|mcp_configs|mcp_exclude)|sync\.skills\.(enabled|exclude)|memory\.(auto_extract|extractor)|live\.(inject_on_prompt|inject_token_budget|conflict_policy)|handoff\.keep_recent_turns|privacy\.(exclude_projects|include_projects|redact)|agents\.enabled|agents\.[a-z0-9-]+\.direction)$`)
+var settableKey = regexp.MustCompile(`^(sync\.(sessions|memory|global_memory|project_memory|rules|exclude_files|mcp_configs|mcp_exclude)|sync\.skills\.(enabled|exclude)|memory\.(auto_extract|extractor)|live\.(inject_on_prompt|inject_token_budget|conflict_policy)|handoff\.keep_recent_turns|privacy\.(exclude_projects|include_projects|redact)|agents\.enabled|agents\.[a-z0-9-]+\.(direction|inject))$`)
 
 // setConfig edits one value in the global file, keeping comments and layout.
 // The result must load as a valid configuration before it replaces the file.

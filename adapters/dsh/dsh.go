@@ -135,6 +135,8 @@ func (a *Adapter) Capabilities(v kit.Version) kit.Capabilities {
 		SessionRead:  true,
 		SessionWrite: string(v) == "0.2.2-rc.1" || versions.Allowed(ID, string(v)),
 		LiveTail:     true,
+		Hooks:        pluginHooks(v),
+		MCP:          true,
 		RulesFiles: []kit.PathSpec{
 			{Scope: model.ScopeProject, Path: "AGENTS.md", Format: kit.FormatSource},
 			{Scope: model.ScopeGlobal, Path: "~/.dsh/AGENTS.md", Format: kit.FormatGenerate},
@@ -147,13 +149,6 @@ func (a *Adapter) Capabilities(v kit.Version) kit.Capabilities {
 		Tools:         tools,
 	}
 }
-
-// InstallHooks implements Adapter. dsh exposes no shell hooks, so connecting
-// needs no hook configuration on its side.
-func (a *Adapter) InstallHooks(ctx context.Context, cfg kit.HookConfig) error { return nil }
-
-// UninstallHooks implements Adapter.
-func (a *Adapter) UninstallHooks(ctx context.Context) error { return nil }
 
 var logRe = regexp.MustCompile(`^session(?:\.v(\d+))?\.jsonl(\.zstd)?$`)
 
