@@ -17,8 +17,8 @@ var messagesEN = map[string]string{
 	"仅 MCP 按需查询": "MCP queries only", "写入规则文件的托管区块 + MCP": "Managed block in rule files + MCP", "不支持": "Not supported", "仅写入规则文件托管区块": "Managed block in rule files only",
 	"这个会话没有可同步的迁移记录。": "This session has no migration to sync with.", "两边已经是最新的。": "Both sides are up to date.", "这个项目被隐私规则排除，不能同步": "This project is excluded by privacy rules and can't be synced.",
 	"当前配置不允许这个方向的同步。": "The current configuration doesn't allow syncing in this direction.", "新增内容超出目标 agent 的上下文预算，没有写入。": "The new content exceeds the target agent's context budget. Nothing was written.",
-	"目标会话是 Codex 原生分页格式，暂不能追加；可以用“迁移”生成新的副本。": "The target is a native paginated Codex session and can't be appended to yet. Use Migrate to create a new copy.",
-	"目标会话末尾有未写完的内容，已停止，请稍后重试":                 "The target session ends with an unfinished write. Stopped; please try again later.", "写入后读回校验失败，已回滚": "Read-back verification failed. The write was rolled back.",
+	"目标会话的存储格式暂不支持追加；可以用“迁移”生成新的副本。": "The target session's storage format can't be appended to yet. Use Migrate to create a new copy.",
+	"目标会话末尾有未写完的内容，已停止，请稍后重试":        "The target session ends with an unfinished write. Stopped; please try again later.", "写入后读回校验失败，已回滚": "Read-back verification failed. The write was rolled back.",
 	"agent 未启用（agents.enabled）": "Agent is disabled (agents.enabled)", "规则同步已关闭（sync.rules）": "Rule sync is off (sync.rules)", "被 sync.exclude_files 排除": "Excluded by sync.exclude_files", "这个文件就是规则源": "This file is the rule source",
 	"规则源不存在": "Rule source doesn't exist", "未声明": "undeclared", "副本不存在，创建软链接": "No copy yet; will create a symlink", "软链接已指向规则源": "Symlink already points to the source", "已有指向别处的软链接": "A symlink here points elsewhere",
 	"内容与源相同，替换为软链接": "Same content as the source; will replace with a symlink", "已有内容不同的目录": "A directory with different content exists", "已有内容不同的文件，不自动覆盖": "A file with different content exists; it won't be overwritten",
@@ -37,6 +37,7 @@ var messagesEN = map[string]string{
 	"Codex 不支持 SSE 传输的 MCP server": "Codex doesn't support MCP servers over SSE",
 	"记忆同步已关闭（sync.memory），不能导入":    "Memory sync is off (sync.memory), so nothing can be imported", "同步已暂停，恢复后再导入": "Sync is paused. Resume it before importing.",
 	"已有一个历史导入正在进行":                                "An import is already running",
+	"请先选择项目目录":                                    "Choose a project folder first",
 	"pi 只支持 stdio 和 streamable HTTP 的 MCP server": "pi supports only stdio and streamable HTTP MCP servers", "pi 的 MCP 配置不支持 cwd": "pi's MCP configuration doesn't support cwd",
 	"任务需要先选择项目目录": "Choose a project folder for the task first", "任务标题不能为空": "Task title can't be empty", "not found": "Not found",
 	"数据库可打开": "Database opens", "数据库权限为 0600": "Database permissions are 0600", "守护进程在线": "Daemon is online",
@@ -47,6 +48,9 @@ var patternsEN = []struct {
 	with string
 }{
 	{regexp.MustCompile(`^恢复命令：(.*)$`), "Resume command: $1"},
+	{regexp.MustCompile(`^(.*) 不是 git 仓库$`), "$1 is not a git repository"},
+	{regexp.MustCompile(`^未知的 agent：(.*)$`), "Unknown agent: $1"},
+	{regexp.MustCompile(`^(.*) 有 (\d+) 个未提交的改动；提交后再删除，或强制删除（改动会丢失）$`), "$1 has $2 uncommitted changes. Commit them first, or force the deletion (the changes are lost)."},
 	{regexp.MustCompile(`^只在 (.*) 中配置；可合回源后同步给其他 agent$`), "Configured only in $1. Merge it into the source to sync it to the other agents."},
 	{regexp.MustCompile(`^还没有 MCP 源（(.*)），两边也都没有可同步的 server$`), "No MCP source yet ($1), and no servers to sync on either side"},
 	{regexp.MustCompile(`(?s)^目标 agent 不支持原生写回（版本 (.*)），已生成交接文档：(.*)\n请在目标 agent 中引用这个文件。$`), "The target agent doesn't support native write-back (version $1). Handoff document created: $2\nReference this file in the target agent."},

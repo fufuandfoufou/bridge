@@ -63,6 +63,7 @@ agent 的会话文件不是公开接口，版本升级可能改变格式。Bridg
 | 会话迁移 | 索引和筛选会话、原生迁移、工具映射、超长裁剪、交接文档降级、迁移后双向更新 |
 | 实时协作 | 增量采集、hook 注入进展、MCP 查询（`session_list`、`session_events`、`memory_search`）、文件认领提醒、工作区改动提示 |
 | 任务看板 | 项目内共享任务，`task_add` / `task_claim` / `task_update` / `task_done`，认领是原子的，只有认领者能更新；新会话开始时注入未完成任务 |
+| Worktree 模式（可选） | 每个 agent 在自己的 git worktree 和分支上工作，互不覆盖文件；同一仓库的所有 worktree 共享进度、记忆和任务看板；汇总各 worktree 的提交、未提交改动和最近活动 |
 | 记忆 | 全局偏好和项目记忆、自动提取（可选）、从历史会话导入、冲突取代、审核、删除后不再提取 |
 | 文件同步 | 规则与 Skill 以一份为源、软链接或生成副本、漂移检测、合回源或以源为准；MCP server 配置按条目同步（默认关闭） |
 | 配置 | 四层合并、按类别和 agent 开关、同步方向、`why` 解释生效来源 |
@@ -116,6 +117,7 @@ go build -o bin/bridge ./cmd/bridge
 | `memory list/review/add/edit/forget/extract` | 管理记忆 |
 | `memory import [--all] [--since 90d] [--dry-run]` | 从历史会话提取记忆：先估算、确认后才发送，结果进入待审核 |
 | `task list/add/reopen/delete` | 管理当前项目的任务看板 |
+| `worktree add <agent>` / `list` / `remove` | 为 agent 创建独立 worktree（分支 `bridge/<agent>`）、查看汇总、删除（分支保留） |
 | `adapter list/trust/test` | 外部适配器与一致性测试 |
 
 任何命令都可以用 `--set key=value` 覆盖配置。配置分四层：内置默认 → `~/.config/bridge/config.toml` → `<repo>/.bridge.toml` → `--set`。
@@ -139,12 +141,11 @@ pi 没有 shell hooks，接入后通过 MCP 查询其他 agent 的进展，记�
 
 - 迁移不是字节级副本：推理内容不迁移，无法映射的工具转为文本，超长会话会压缩。
 - 追加的历史要重新打开会话才生效，正在运行的客户端不会感知。Codex 没有运行状态登记，只能按文件最近是否变化来判断是否在使用。
-- Codex 的原生分页会话暂不支持追加更新，只能生成新副本。
 - 文件认领可设为提醒或拦截，只约束接入的 agent 的编辑工具；Shell 命令、手工编辑不受保护，后台离线时不拦截。
 - 后台会监听最近两小时活跃的 git 项目目录（跳过隐藏目录、node_modules、vendor、dist、build、target 等），把其他来源的文件改动告诉 agent。来源只是推测：附近有某个 agent 的编辑工具改过同一文件时标为“可能来自”，否则标为未知。
 - MCP 配置同步默认关闭，开启方式是 `bridge config` 或设置页里的 `sync.mcp_configs`。源文件是 `~/.config/bridge/mcp.toml`（全局）和项目的 `.agents/mcp.toml`，按条目写入 `~/.claude.json`、`.mcp.json` 和 Codex 的 `config.toml`。已有的同名配置、被手工改过的条目不会被覆盖。Codex 只读取已信任项目里的 `.codex/config.toml`，也不支持 SSE 传输。详见 [docs/mcp-sync.md](docs/mcp-sync.md)。
 - 导入历史会话会把脱敏后的对话文本发给提取用的 agent，并消耗你的额度。导入前会先显示会话数、调用次数和 token 估算，迁移生成的副本不会重复提取，结果全部进入待审核。中断后再次导入会从中断处继续。
-- worktree 模式尚未实现。
+- Worktree 模式不会自动合并分支，合并由你决定（界面里可以复制合并命令）。删除 worktree 时有未提交的改动会先拒绝，分支和已提交的内容始终保留。
 - 目前只支持 macOS。
 
 ## 文档与贡献

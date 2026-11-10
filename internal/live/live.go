@@ -5,6 +5,7 @@ package live
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -26,6 +27,9 @@ type Group struct {
 	Agent     string
 	Title     string
 	Events    []model.Event
+	// Where names the other worktree the session works in, when it isn't
+	// the reader's: its changes are not in the reader's files.
+	Where string
 }
 
 func lineDelta(diff string) (add, del int) {
@@ -80,6 +84,9 @@ func Digest(g Group) string {
 		fmt.Fprintf(&b, "（%s）", oneLine(g.Title, 40))
 	}
 	fmt.Fprintf(&b, " · 会话 %s\n", g.SessionID)
+	if g.Where != "" {
+		fmt.Fprintf(&b, "工作位置：%s（这些改动不在你当前的目录里）\n", g.Where)
+	}
 	if len(files) > 0 {
 		names := make([]string, 0, len(files))
 		for f := range files {
@@ -232,7 +239,8 @@ func (s *Service) others(cfg *config.Config, projectID, self, agent string) ([]m
 }
 
 // delta collects unread events and remembers how far they reach for Ack.
-func (s *Service) delta(cfg *config.Config, projectID, self, agent string) ([]Group, error) {
+func (s *Service) delta(cfg *config.Config, p model.Project, self, agent string) ([]Group, error) {
+	projectID := p.ID
 	others, err := s.others(cfg, projectID, self, agent)
 	if err != nil {
 		return nil, err
@@ -259,7 +267,7 @@ func (s *Service) delta(cfg *config.Config, projectID, self, agent string) ([]Gr
 		if len(es) == 0 {
 			continue
 		}
-		groups = append(groups, Group{SessionID: o.ID, Agent: o.Agent, Title: o.Title, Events: es})
+		groups = append(groups, Group{SessionID: o.ID, Agent: o.Agent, Title: o.Title, Events: es, Where: elsewhere(p, o.CWD)})
 		marks[o.ID] = es[len(es)-1].Seq
 	}
 	s.mu.Lock()
@@ -308,7 +316,7 @@ func (s *Service) SessionStart(agent, native, cwd string) (string, error) {
 		}
 	}
 	if cfg.Sync.Sessions {
-		groups, err := s.delta(cfg, p.ID, self, agent)
+		groups, err := s.delta(cfg, p, self, agent)
 		if err != nil {
 			return "", err
 		}
@@ -383,7 +391,7 @@ func (s *Service) PromptSubmit(agent, native, cwd string) (string, error) {
 	if err := s.Store.JoinParticipant(self, p.ID, s.now()); err != nil {
 		return "", err
 	}
-	groups, err := s.delta(cfg, p.ID, self, agent)
+	groups, err := s.delta(cfg, p, self, agent)
 	if err != nil {
 		return "", err
 	}
@@ -419,4 +427,34 @@ func (s *Service) Stop(agent, native, cwd string) error {
 		return s.Store.Enqueue(self, s.now())
 	}
 	return nil
+}
+
+// elsewhere describes the worktree of a session in another checkout of the
+// reader's project, or "" when both work in the same one.
+func elsewhere(reader model.Project, cwd string) string {
+	if cwd == "" {
+		return ""
+	}
+	root := config.ProjectRoot(cwd)
+	mine := reader.Checkout()
+	if root == "" || mine == "" || sameDir(root, mine) {
+		return ""
+	}
+	where := "worktree " + root
+	if sameDir(root, reader.Path) {
+		where = "主目录 " + root
+	}
+	if b := project.Branch(root); b != "" {
+		where += "，分支 " + b
+	}
+	return where
+}
+
+func sameDir(a, b string) bool {
+	if a == b {
+		return true
+	}
+	ra, e1 := filepath.EvalSymlinks(a)
+	rb, e2 := filepath.EvalSymlinks(b)
+	return e1 == nil && e2 == nil && ra == rb
 }

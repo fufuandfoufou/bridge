@@ -48,7 +48,7 @@ var stdin = bufio.NewReader(os.Stdin)
 func main() {
 	root := &cobra.Command{Use: "bridge", Short: "Sync sessions, memory, rules and skills across coding agents", SilenceUsage: true}
 	root.PersistentFlags().StringArrayVar(&setFlags, "set", nil, "override a config value, e.g. --set live.conflict_policy=block")
-	root.AddCommand(initCmd(), daemonCmd(), planCmd(), syncCmd(), handoffCmd(), sessionsCmd(), statusCmd(), whyCmd(), memoryCmd(), taskCmd(),
+	root.AddCommand(initCmd(), daemonCmd(), planCmd(), syncCmd(), handoffCmd(), sessionsCmd(), statusCmd(), whyCmd(), memoryCmd(), taskCmd(), worktreeCmd(),
 		doctorCmd(), uninstallCmd(), hookCmd(), mcpCmd(), adapterCmd(), debugCmd(), configCmd(), apiCmd())
 	if err := root.Execute(); err != nil {
 		os.Exit(1)

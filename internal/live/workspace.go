@@ -35,7 +35,7 @@ func (s *Service) workspaceDigest(self string, p model.Project) (string, int64, 
 		return "", mark, err
 	}
 	last := changes[len(changes)-1].ID
-	root := p.Path
+	root := p.Checkout()
 	if real, err := filepath.EvalSymlinks(root); err == nil {
 		root = real
 	}
@@ -53,8 +53,8 @@ func (s *Service) workspaceDigest(self string, p model.Project) (string, int64, 
 	var order []string
 	for _, c := range changes {
 		rel, err := filepath.Rel(root, c.Path)
-		if err != nil {
-			rel = c.Path
+		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			continue // another worktree's checkout, not this one's files
 		}
 		own, agents := false, map[string]bool{}
 		for _, e := range edits {

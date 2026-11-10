@@ -286,7 +286,7 @@ func SyncConversation(ctx context.Context, d SyncDeps, id, prefer string) (*Sync
 	}
 	data, err := appender.RenderAppend(ctx, ref, res.Events)
 	if errors.Is(err, kit.ErrNotSupported) {
-		return &SyncResult{State: "blocked", Message: "目标会话是 Codex 原生分页格式，暂不能追加；可以用“迁移”生成新的副本。"}, nil
+		return &SyncResult{State: "blocked", Message: "目标会话的存储格式暂不支持追加；可以用“迁移”生成新的副本。"}, nil
 	}
 	if err != nil {
 		return nil, err
