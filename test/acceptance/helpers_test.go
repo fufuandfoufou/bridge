@@ -38,6 +38,9 @@ func TestMain(m *testing.M) {
 	if out, err := exec.Command("go", "build", "-o", binPath, "bridge/cmd/bridge").CombinedOutput(); err != nil {
 		panic(string(out))
 	}
+	// macOS scans a new executable on its first run, which would count
+	// against the timing tests; run it once beforehand.
+	_ = exec.Command(binPath, "--help").Run()
 	code := m.Run()
 	os.RemoveAll(dir)
 	os.Exit(code)

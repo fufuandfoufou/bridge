@@ -1,6 +1,6 @@
 # Releasing
 
-Pushing a tag such as `v0.1.0` runs `.github/workflows/release.yml`: it tests, builds a universal app, signs it with a Developer ID, notarizes the dmg, and attaches it to a GitHub Release. It fails instead of publishing an unsigned build.
+Pushing a tag such as `v0.1.0` runs `.github/workflows/release.yml`: it tests, builds a universal app, signs it with a Developer ID, notarizes the dmg, and attaches it to a GitHub Release. Without the signing secrets it only runs the tests and skips publishing, so it never publishes an unsigned build.
 
 ## One-time setup
 

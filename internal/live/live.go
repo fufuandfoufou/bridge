@@ -321,6 +321,11 @@ func (s *Service) SessionStart(agent, native, cwd string) (string, error) {
 			parts = append(parts, t)
 		}
 	}
+	if t, err := s.taskSummary(p.ID); err != nil {
+		return "", err
+	} else if t != "" {
+		parts = append(parts, t)
+	}
 	return strings.Join(parts, "\n\n"), nil
 }
 
@@ -382,7 +387,22 @@ func (s *Service) PromptSubmit(agent, native, cwd string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return summarize(groups, cfg.Live.InjectTokenBudget, s.footer(agent)), nil
+	ws, mark, err := s.workspaceDigest(self, p)
+	if err != nil {
+		return "", err
+	}
+	s.mu.Lock()
+	if s.pending[self] == nil {
+		s.pending[self] = map[string]int64{}
+	}
+	s.pending[self][workspaceSource(p.ID)] = mark
+	s.mu.Unlock()
+	budget := cfg.Live.InjectTokenBudget - model.EstimateTokens(ws)
+	out := summarize(groups, budget, s.footer(agent))
+	if ws != "" {
+		out = strings.TrimRight(out+"\n"+ws, "\n") + "\n"
+	}
+	return strings.TrimLeft(out, "\n"), nil
 }
 
 // Stop ends participation and queues the session for memory extraction.

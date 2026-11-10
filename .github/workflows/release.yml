@@ -1,5 +1,7 @@
 # Pushing a v* tag builds, signs, notarizes and publishes the macOS app.
-# The job fails rather than publish anything unsigned. See docs/releasing.md.
+# Without signing secrets the job only runs the tests and skips publishing, so
+# unsigned releases uploaded by hand don't show up as failed runs. It never
+# publishes anything unsigned. See docs/releasing.md.
 name: Release
 
 on:
@@ -23,7 +25,22 @@ jobs:
       - name: Test
         run: go test ./... -count=1
 
+      - name: Check signing secrets
+        id: secrets
+        env:
+          CERT_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+          SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
+          NOTARY_KEY_BASE64: ${{ secrets.APPLE_NOTARY_KEY_BASE64 }}
+        run: |
+          if [ -n "$CERT_BASE64" ] && [ -n "$SIGN_IDENTITY" ] && [ -n "$NOTARY_KEY_BASE64" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Signing secrets are not set, so nothing is built or published. Upload unsigned builds by hand."
+          fi
+
       - name: Import signing certificate
+        if: steps.secrets.outputs.ready == 'true'
         env:
           CERT_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
           CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
@@ -41,6 +58,7 @@ jobs:
           rm "$RUNNER_TEMP/cert.p12"
 
       - name: Build, sign and notarize
+        if: steps.secrets.outputs.ready == 'true'
         env:
           SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
           NOTARY_KEY_BASE64: ${{ secrets.APPLE_NOTARY_KEY_BASE64 }}
@@ -53,10 +71,11 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}" ./scripts/build-app.sh
 
       - name: Publish
+        if: steps.secrets.outputs.ready == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "$GITHUB_REF_NAME" dist/*.dmg --verify-tag --generate-notes --title "Bridge $GITHUB_REF_NAME"
 
       - name: Remove signing keychain
-        if: always()
+        if: always() && steps.secrets.outputs.ready == 'true'
         run: security delete-keychain "$RUNNER_TEMP/signing.keychain-db" || true

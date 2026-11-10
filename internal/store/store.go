@@ -58,6 +58,15 @@ CREATE TABLE conversation_links(
   target_seq INTEGER NOT NULL,
   PRIMARY KEY(source_id, target_id)
 );
+`, `
+CREATE TABLE workspace_changes(
+  id INTEGER PRIMARY KEY AUTOINCREMENT, project_id TEXT NOT NULL, path TEXT NOT NULL, op TEXT NOT NULL, at INTEGER NOT NULL);
+CREATE INDEX workspace_changes_project ON workspace_changes(project_id, id);
+CREATE TABLE tasks(
+  id TEXT PRIMARY KEY, project_id TEXT NOT NULL, title TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL, owner TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL);
+CREATE INDEX tasks_project ON tasks(project_id, status);
 `}
 
 // Store wraps the database.
@@ -893,4 +902,239 @@ func (s *Store) MaxSeqAt(sessionID string, t time.Time) (int64, error) {
 	var n sql.NullInt64
 	err := s.db.QueryRow(`SELECT MAX(seq) FROM events WHERE session_id=? AND ts<=?`, sessionID, unix(t)).Scan(&n)
 	return n.Int64, err
+}
+
+// WorkspaceChange is a file change seen in a project directory, by any means.
+type WorkspaceChange struct {
+	ID   int64
+	Path string
+	Op   string // create | modify | delete
+	At   time.Time
+}
+
+// AddWorkspaceChange records a change observed on disk.
+func (s *Store) AddWorkspaceChange(projectID, path, op string, at time.Time) error {
+	_, err := s.db.Exec(`INSERT INTO workspace_changes(project_id,path,op,at) VALUES(?,?,?,?)`, projectID, path, op, unix(at))
+	return err
+}
+
+// WorkspaceChanges lists changes after an ID, oldest first.
+func (s *Store) WorkspaceChanges(projectID string, afterID int64, since time.Time, limit int) ([]WorkspaceChange, error) {
+	rows, err := s.db.Query(`SELECT id,path,op,at FROM workspace_changes WHERE project_id=? AND id>? AND at>=? ORDER BY id LIMIT ?`,
+		projectID, afterID, unix(since), limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []WorkspaceChange
+	for rows.Next() {
+		var c WorkspaceChange
+		var at int64
+		if err := rows.Scan(&c.ID, &c.Path, &c.Op, &at); err != nil {
+			return nil, err
+		}
+		c.At = fromUnix(at)
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
+// PruneWorkspaceChanges drops changes older than the given instant.
+func (s *Store) PruneWorkspaceChanges(before time.Time) error {
+	_, err := s.db.Exec(`DELETE FROM workspace_changes WHERE at<?`, unix(before))
+	return err
+}
+
+// ToolEdit is a file change an agent's edit tool reported.
+type ToolEdit struct {
+	SessionID string
+	Agent     string
+	Path      string // as the tool gave it, possibly relative
+	At        time.Time
+}
+
+// ToolEdits lists the edit-tool file changes in a project's sessions within
+// a time window, for attributing changes seen on disk.
+func (s *Store) ToolEdits(projectID string, from, to time.Time) ([]ToolEdit, error) {
+	rows, err := s.db.Query(`SELECT s.id, s.agent, json_extract(e.file,'$.path'), e.ts FROM events e JOIN sessions s ON s.id=e.session_id
+		WHERE s.project_id=? AND e.kind='file_change' AND e.ts BETWEEN ? AND ?`, projectID, unix(from), unix(to))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []ToolEdit
+	for rows.Next() {
+		var t ToolEdit
+		var path sql.NullString
+		var at int64
+		if err := rows.Scan(&t.SessionID, &t.Agent, &path, &at); err != nil {
+			return nil, err
+		}
+		t.Path, t.At = path.String, fromUnix(at)
+		out = append(out, t)
+	}
+	return out, rows.Err()
+}
+
+// Task statuses.
+const (
+	TaskOpen    = "open"
+	TaskClaimed = "claimed"
+	TaskDone    = "done"
+)
+
+// Task is an entry on a project's shared task board.
+type Task struct {
+	ID        string    `json:"id"`
+	ProjectID string    `json:"project_id"`
+	Title     string    `json:"title"`
+	Detail    string    `json:"detail"`
+	Status    string    `json:"status"`
+	Owner     string    `json:"owner"`
+	Note      string    `json:"note"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+const taskCols = `id,project_id,title,detail,status,owner,note,created_at,updated_at`
+
+func scanTask(r interface{ Scan(...any) error }) (Task, error) {
+	var t Task
+	var c, u int64
+	err := r.Scan(&t.ID, &t.ProjectID, &t.Title, &t.Detail, &t.Status, &t.Owner, &t.Note, &c, &u)
+	t.CreatedAt, t.UpdatedAt = fromUnix(c), fromUnix(u)
+	return t, err
+}
+
+// AddTask puts a new open task on the board.
+func (s *Store) AddTask(projectID, title, detail string) (Task, error) {
+	title = strings.TrimSpace(title)
+	if title == "" {
+		return Task{}, errors.New("任务标题不能为空")
+	}
+	now := time.Now().UTC()
+	t := Task{ID: fsutil.NewUUID(), ProjectID: projectID, Title: title, Detail: detail, Status: TaskOpen, CreatedAt: now, UpdatedAt: now}
+	_, err := s.db.Exec(`INSERT INTO tasks(`+taskCols+`) VALUES(?,?,?,?,?,?,?,?,?)`, t.ID, t.ProjectID, t.Title, t.Detail, t.Status, "", "", unix(now), unix(now))
+	return t, err
+}
+
+// ShortTaskID is the form tasks are shown in. IDs are time-ordered, so their
+// random tail tells them apart, not their head.
+func ShortTaskID(id string) string {
+	if len(id) <= 8 {
+		return id
+	}
+	return id[len(id)-8:]
+}
+
+// GetTask loads a task by ID, or by a unique prefix or short (tail) form.
+func (s *Store) GetTask(id string) (Task, error) {
+	if len(id) < 4 {
+		return Task{}, ErrNotFound
+	}
+	rows, err := s.db.Query(`SELECT `+taskCols+` FROM tasks WHERE id=? OR id LIKE ? OR id LIKE ? LIMIT 2`, id, id+"%", "%"+id)
+	if err != nil {
+		return Task{}, err
+	}
+	defer rows.Close()
+	var found []Task
+	for rows.Next() {
+		t, err := scanTask(rows)
+		if err != nil {
+			return t, err
+		}
+		found = append(found, t)
+	}
+	switch len(found) {
+	case 0:
+		return Task{}, ErrNotFound
+	case 1:
+		return found[0], nil
+	}
+	return Task{}, fmt.Errorf("task id %q is ambiguous", id)
+}
+
+// ListTasks returns a project's tasks, or every project's when projectID is
+// empty, open first.
+func (s *Store) ListTasks(projectID string, includeDone bool) ([]Task, error) {
+	q := `SELECT ` + taskCols + ` FROM tasks WHERE (?='' OR project_id=?)`
+	if !includeDone {
+		q += ` AND status<>'done'`
+	}
+	q += ` ORDER BY CASE status WHEN 'open' THEN 0 WHEN 'claimed' THEN 1 ELSE 2 END, created_at`
+	rows, err := s.db.Query(q, projectID, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []Task{}
+	for rows.Next() {
+		t, err := scanTask(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, t)
+	}
+	return out, rows.Err()
+}
+
+// ClaimTask takes an open task for owner in one statement, so of concurrent
+// claimants exactly one wins. Claiming one's own task again is a no-op.
+func (s *Store) ClaimTask(id, owner string) (Task, bool, error) {
+	t, err := s.GetTask(id)
+	if err != nil {
+		return t, false, err
+	}
+	r, err := s.db.Exec(`UPDATE tasks SET status='claimed', owner=?, updated_at=? WHERE id=? AND (status='open' OR (status='claimed' AND owner=?))`,
+		owner, unix(time.Now()), t.ID, owner)
+	if err != nil {
+		return t, false, err
+	}
+	n, _ := r.RowsAffected()
+	latest, err := s.GetTask(t.ID)
+	return latest, n == 1, err
+}
+
+// UpdateTask changes a claimed task; only its holder may. status is claimed
+// (note only), open (release) or done.
+func (s *Store) UpdateTask(id, owner, status, note string) (Task, bool, error) {
+	t, err := s.GetTask(id)
+	if err != nil {
+		return t, false, err
+	}
+	newOwner := owner
+	if status == TaskOpen {
+		newOwner = ""
+	}
+	r, err := s.db.Exec(`UPDATE tasks SET status=?, owner=?, note=CASE WHEN ?<>'' THEN ? ELSE note END, updated_at=?
+		WHERE id=? AND status='claimed' AND owner=?`, status, newOwner, note, note, unix(time.Now()), t.ID, owner)
+	if err != nil {
+		return t, false, err
+	}
+	n, _ := r.RowsAffected()
+	latest, err := s.GetTask(t.ID)
+	return latest, n == 1, err
+}
+
+// ReopenTask puts a task back on the board whoever holds it; for the person
+// managing the board when an agent session went away holding it.
+func (s *Store) ReopenTask(id string) (Task, error) {
+	t, err := s.GetTask(id)
+	if err != nil {
+		return t, err
+	}
+	if _, err := s.db.Exec(`UPDATE tasks SET status='open', owner='', updated_at=? WHERE id=?`, unix(time.Now()), t.ID); err != nil {
+		return t, err
+	}
+	return s.GetTask(t.ID)
+}
+
+// DeleteTask removes a task; used by the person managing the board.
+func (s *Store) DeleteTask(id string) error {
+	t, err := s.GetTask(id)
+	if err != nil {
+		return err
+	}
+	_, err = s.db.Exec(`DELETE FROM tasks WHERE id=?`, t.ID)
+	return err
 }
