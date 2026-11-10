@@ -22,6 +22,7 @@
         "rules": { "type": "boolean" },
         "rules_source": { "type": "string" },
         "mcp_configs": { "type": "boolean" },
+        "mcp_exclude": { "type": "array", "items": { "type": "string" } },
         "exclude_files": { "type": "array", "items": { "type": "string" } },
         "skills": {
           "type": "object",

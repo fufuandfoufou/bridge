@@ -658,7 +658,9 @@ func DetectAgents(ctx context.Context, reg *kit.Registry) ([]filesync.Agent, err
 			return nil, err
 		}
 		if in.Installed {
-			out = append(out, filesync.Agent{ID: a.ID(), Caps: a.Capabilities(in.Version)})
+			fa := filesync.Agent{ID: a.ID(), Caps: a.Capabilities(in.Version)}
+			fa.MCP, _ = a.(kit.MCPConfigurer)
+			out = append(out, fa)
 		}
 	}
 	return out, nil

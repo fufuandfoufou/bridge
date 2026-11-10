@@ -1,6 +1,6 @@
 "概览" = "Overview";
 "会话迁移" = "Sessions";
-"规则与 Skill" = "Rules & Skills";
+"规则、Skill 与 MCP" = "Rules, Skills & MCP";
 "文件认领" = "File Claims";
 "记忆" = "Memory";
 "设置" = "Settings";
@@ -144,7 +144,7 @@
 "仅全局规则与 skill" = "Global rules and skills only";
 "选择项目…" = "Choose Project…";
 "没有需要同步的内容" = "Nothing to sync";
-"在项目根目录放一份 AGENTS.md，或在 .agents/skills 下添加 skill。" = "Add an AGENTS.md to the project root, or a skill under .agents/skills.";
+"在项目根目录放一份 AGENTS.md，或在 .agents/skills 下添加 skill；MCP server 写在 .agents/mcp.toml。" = "Add an AGENTS.md to the project root or a skill under .agents/skills. MCP servers go in .agents/mcp.toml.";
 "有 %lld 项需要你决定，内容不会被自动覆盖。" = "Needs your decision: %lld. Nothing is overwritten automatically.";
 "把副本合回源" = "Merge Copy into Source";
 "以源为准覆盖…" = "Overwrite from Source…";
@@ -163,7 +163,7 @@
 "添加记忆" = "Add Memory";
 "全局偏好" = "Global Preference";
 "当前项目" = "Current Project";
-"请先在“规则与 Skill”页选择项目。" = "Choose a project on the Rules & Skills page first.";
+"请先在“规则、Skill 与 MCP”页选择项目。" = "Choose a project on the Rules, Skills & MCP page first.";
 "开启记忆自动提取？" = "Turn on automatic memory extraction?";
 "开启后，脱敏后的对话文本会发送给 %@ 背后的模型服务，并消耗你的额度。工具输出不会发送。" = "Redacted conversation text will be sent to the model service behind %@ and will use your quota. Tool output isn't sent.";
 "同步内容" = "What to Sync";
@@ -208,6 +208,12 @@
 "删除这个任务？" = "Delete this task?";
 "新任务标题" = "New task title";
 "说明（可选）" = "Details (optional)";
+"只在一边" = "One side only";
+"只在 %@ 中配置；可用下方“把副本合回源”加入源，再同步给其他 agent" = "Configured only in %@. Use “Merge Copy into Source” below to add it to the source and sync it to the other agents.";
+"MCP 配置" = "MCP configuration";
+"MCP server 以 ~/.config/bridge/mcp.toml（全局）和项目的 .agents/mcp.toml 为源，写入各 agent 自己的配置。已有的同名配置不会被覆盖。" = "MCP servers come from ~/.config/bridge/mcp.toml (global) and the project's .agents/mcp.toml, and are written into each agent's own configuration. Existing servers with the same name are never overwritten.";
+"排除的 MCP server" = "Excluded MCP Servers";
+"例如 node_repl" = "e.g. node_repl";
 "界面语言" = "Interface language";
 "跟随系统" = "Match System";
 "简体中文" = "简体中文";

@@ -43,12 +43,14 @@ type Action struct {
 	Scope    string `json:"scope"`
 	Reason   string `json:"reason"`
 	Format   string `json:"format"`
+	Name     string `json:"name,omitempty"` // MCP server name
 }
 
 // Agent pairs an adapter ID with its capabilities.
 type Agent struct {
 	ID   string
 	Caps kit.Capabilities
+	MCP  kit.MCPConfigurer // nil when the agent's MCP config can't be synced
 }
 
 // Input describes what to plan.
@@ -96,6 +98,11 @@ func Plan(in Input) ([]Action, error) {
 				}
 				out = append(out, acts...)
 			}
+			acts, err := planMCP(in, a, sc, gd)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, acts...)
 		}
 	}
 	return out, nil
@@ -344,6 +351,23 @@ type Report struct {
 // change is journaled so `bridge uninstall` can restore it.
 func Apply(actions []Action, o Options) (Report, error) {
 	var r Report
+	var mcpActs []Action
+	rest := actions[:0:0]
+	for _, a := range actions {
+		if a.Category == "mcp" {
+			mcpActs = append(mcpActs, a)
+		} else {
+			rest = append(rest, a)
+		}
+	}
+	actions = rest
+	if len(mcpActs) > 0 {
+		mr, err := applyMCP(mcpActs, o)
+		r.Applied, r.Blocked = append(r.Applied, mr.Applied...), append(r.Blocked, mr.Blocked...)
+		if err != nil {
+			return r, err
+		}
+	}
 	j, err := loadJournal()
 	if err != nil {
 		return r, err

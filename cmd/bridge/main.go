@@ -267,11 +267,46 @@ func planFor(ctx context.Context, cfg *config.Config, wd string, reg *kit.Regist
 	return filesync.Plan(filesync.Input{ProjectRoot: root, Agents: agents, Config: cfg})
 }
 
+// syncFiles applies a plan. Adopting changes the sources, which can give
+// other agents something new to receive, so a second pass delivers it.
+func syncFiles(plan func() ([]filesync.Action, error), o filesync.Options) (filesync.Report, error) {
+	acts, err := plan()
+	if err != nil {
+		return filesync.Report{}, err
+	}
+	r, err := filesync.Apply(acts, o)
+	if err != nil || o.Adopt == "" {
+		return r, err
+	}
+	if acts, err = plan(); err != nil {
+		return r, err
+	}
+	again, err := filesync.Apply(acts, filesync.Options{})
+	r.Applied = append(r.Applied, again.Applied...)
+	// The first pass explains what adopting could not resolve; the second
+	// adds anything still waiting that the first did not cover.
+	seen := map[string]bool{}
+	key := func(a filesync.Action) string { return a.Category + "\x00" + a.Agent + "\x00" + a.Target + "\x00" + a.Name }
+	for _, a := range r.Blocked {
+		seen[key(a)] = true
+	}
+	for _, a := range again.Blocked {
+		if !seen[key(a)] {
+			r.Blocked = append(r.Blocked, a)
+		}
+	}
+	return r, err
+}
+
 func printActions(acts []filesync.Action) {
 	w := tabwriter.NewWriter(os.Stdout, 0, 2, 2, ' ', 0)
 	fmt.Fprintln(w, "动作\t类别\tagent\t目标\t原因")
 	for _, a := range acts {
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", a.Kind, a.Category, a.Agent, a.Target, a.Reason)
+		target := a.Target
+		if a.Name != "" {
+			target += " · " + a.Name
+		}
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", a.Kind, a.Category, a.Agent, target, a.Reason)
 	}
 	w.Flush()
 }
@@ -309,11 +344,7 @@ func syncCmd() *cobra.Command {
 		if err != nil {
 			return err
 		}
-		acts, err := planFor(cmd.Context(), cfg, wd, registry(cfg))
-		if err != nil {
-			return err
-		}
-		r, err := filesync.Apply(acts, filesync.Options{Force: force, Adopt: adopt})
+		r, err := syncFiles(func() ([]filesync.Action, error) { return planFor(cmd.Context(), cfg, wd, registry(cfg)) }, filesync.Options{Force: force, Adopt: adopt})
 		if err != nil {
 			return err
 		}
@@ -327,7 +358,7 @@ func syncCmd() *cobra.Command {
 		}
 		return nil
 	}}
-	c.Flags().StringVar(&adopt, "adopt", "", "merge this agent's replica back into the source")
+	c.Flags().StringVar(&adopt, "adopt", "", "merge this agent's replica (rule file or MCP servers) back into the source")
 	c.Flags().BoolVar(&force, "force", false, "overwrite drifted replicas from the source")
 	return c
 }
@@ -844,6 +875,16 @@ func uninstallCmd() *cobra.Command {
 		}
 		if err := filesync.StripManagedBlocks(ruleFiles); err != nil {
 			errs = append(errs, err)
+		}
+		// MCP entries go first: their removal needs the agents' config readers.
+		if agents, err := installedAgents(ctx, registry(cfg)); err != nil {
+			errs = append(errs, err)
+		} else if notes, err := filesync.UninstallMCP(agents); err != nil {
+			errs = append(errs, err)
+		} else {
+			for _, n := range notes {
+				fmt.Println(n)
+			}
 		}
 		notes, err := filesync.Uninstall()
 		if err != nil {
