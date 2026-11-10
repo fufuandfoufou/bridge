@@ -193,6 +193,47 @@ type Engine struct {
 	Extractor Extractor
 	Config    *config.Config
 	Now       func() time.Time
+	// Review sends every new memory to the review queue, as an import of
+	// old history does: the user hasn't seen these conversations recently.
+	Review bool
+}
+
+// Prompt size limits. Long sessions are sent in several parts so a prompt
+// stays well inside the extractor's context window.
+const (
+	ChunkTokens    = 24000
+	maxMessageRune = 4000
+)
+
+func clip(e model.Event) model.Event {
+	t := []rune(e.Text())
+	if len(t) <= maxMessageRune {
+		return e
+	}
+	c := model.TextEvent(e.Role, string(t[:maxMessageRune])+"…（已截断）", e.TS)
+	c.SessionID, c.Seq = e.SessionID, e.Seq
+	return c
+}
+
+// Chunks splits conversation events into parts of at most budget tokens.
+func Chunks(conv []model.Event, budget int) [][]model.Event {
+	var out [][]model.Event
+	var cur []model.Event
+	size := 0
+	for _, e := range conv {
+		e = clip(e)
+		n := model.EstimateTokens(e.Text()) + 8
+		if len(cur) > 0 && size+n > budget {
+			out = append(out, cur)
+			cur, size = nil, 0
+		}
+		cur = append(cur, e)
+		size += n
+	}
+	if len(cur) > 0 {
+		out = append(out, cur)
+	}
+	return out
 }
 
 func (e *Engine) now() time.Time {
@@ -225,32 +266,43 @@ func (e *Engine) ExtractSession(ctx context.Context, sessionID string) (int, err
 	if len(conv) == 0 {
 		return 0, e.Store.FinishExtraction(sessionID, max)
 	}
-	existing, err := e.Store.ListMemories(model2Filter(s.ProjectID))
-	if err != nil {
-		return 0, err
-	}
-	out, err := e.Extractor.Complete(ctx, BuildPrompt(conv, existing, e.Config.Memory.GlobalCategories))
-	if err != nil {
-		return 0, err
-	}
-	resp, err := ParseResponse(out)
-	if err != nil {
-		return 0, err
-	}
 	n := 0
-	for _, p := range append(resp.Add, resp.Update...) {
-		ok, err := e.Apply(s, p)
+	chunks := Chunks(conv, ChunkTokens)
+	for i, chunk := range chunks {
+		if err := ctx.Err(); err != nil {
+			return n, err
+		}
+		// Each part sees the memories the previous parts produced.
+		existing, err := e.Store.ListMemories(model2Filter(s.ProjectID))
 		if err != nil {
 			return n, err
 		}
-		if ok {
-			n++
+		out, err := e.Extractor.Complete(ctx, BuildPrompt(chunk, existing, e.Config.Memory.GlobalCategories))
+		if err != nil {
+			return n, err
+		}
+		resp, err := ParseResponse(out)
+		if err != nil {
+			return n, err
+		}
+		for _, p := range append(resp.Add, resp.Update...) {
+			ok, err := e.Apply(s, p)
+			if err != nil {
+				return n, err
+			}
+			if ok {
+				n++
+			}
+		}
+		done := chunk[len(chunk)-1].Seq
+		if i == len(chunks)-1 {
+			done = max
+		}
+		if err := e.Store.FinishExtraction(sessionID, done); err != nil {
+			return n, err
 		}
 	}
-	if err := e.compressGlobal(ctx); err != nil {
-		return n, err
-	}
-	return n, e.Store.FinishExtraction(sessionID, max)
+	return n, e.compressGlobal(ctx)
 }
 
 func model2Filter(projectID string) store.MemoryFilter {
@@ -305,7 +357,7 @@ func (e *Engine) Apply(s model.Session, p Proposal) (bool, error) {
 			}
 		}
 	}
-	if m.Confidence < e.Config.Memory.MinConfidence {
+	if e.Review || m.Confidence < e.Config.Memory.MinConfidence {
 		m.Status = model.MemoryPending
 	}
 	return true, e.Store.InsertMemory(m)

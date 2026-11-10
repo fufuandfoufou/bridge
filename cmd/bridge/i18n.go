@@ -35,7 +35,9 @@ var messagesEN = map[string]string{
 	"这个 agent 不支持同步 MCP 配置":                  "This agent can't sync MCP configuration", "这个 agent 没有该范围的 MCP 配置": "This agent has no MCP configuration for this scope",
 	"MCP 配置同步已关闭（sync.mcp_configs）": "MCP configuration sync is off (sync.mcp_configs)", "Claude Code 的 MCP 配置不支持 cwd": "Claude Code's MCP configuration doesn't support cwd",
 	"Codex 不支持 SSE 传输的 MCP server": "Codex doesn't support MCP servers over SSE",
-	"任务需要先选择项目目录":                  "Choose a project folder for the task first", "任务标题不能为空": "Task title can't be empty", "not found": "Not found",
+	"记忆同步已关闭（sync.memory），不能导入":    "Memory sync is off (sync.memory), so nothing can be imported", "同步已暂停，恢复后再导入": "Sync is paused. Resume it before importing.",
+	"已有一个历史导入正在进行": "An import is already running",
+	"任务需要先选择项目目录":  "Choose a project folder for the task first", "任务标题不能为空": "Task title can't be empty", "not found": "Not found",
 	"数据库可打开": "Database opens", "数据库权限为 0600": "Database permissions are 0600", "守护进程在线": "Daemon is online",
 }
 
