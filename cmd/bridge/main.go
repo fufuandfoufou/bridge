@@ -132,9 +132,39 @@ func installLaunchd() error {
 	if err := fsutil.SafeWrite(plistPath(), []byte(plist), 0o644); err != nil {
 		return err
 	}
-	domain := "gui/" + strconv.Itoa(os.Getuid())
-	_ = exec.Command("launchctl", "bootout", domain+"/"+launchLabel).Run()
-	return exec.Command("launchctl", "bootstrap", domain, plistPath()).Run()
+	return reloadService("gui/"+strconv.Itoa(os.Getuid()), plistPath(), 100*time.Millisecond)
+}
+
+// launchctl runs launchctl; tests replace it.
+var launchctl = func(args ...string) ([]byte, error) {
+	return exec.Command("launchctl", args...).CombinedOutput()
+}
+
+// reloadService replaces a loaded service with the plist's current version.
+// bootout returns before the old job is gone, and bootstrapping while it is
+// still there fails (exit status 5), which used to leave the service
+// stopped. So it waits for the old job to go, retries the bootstrap, and if
+// the service is loaded anyway restarts it to pick up the new plist.
+func reloadService(domain, plist string, step time.Duration) error {
+	service := domain + "/" + launchLabel
+	loaded := func() bool { _, err := launchctl("print", service); return err == nil }
+	_, _ = launchctl("bootout", service)
+	for i := 0; i < 50 && loaded(); i++ {
+		time.Sleep(step)
+	}
+	var out []byte
+	var err error
+	for attempt := 1; attempt <= 5; attempt++ {
+		if out, err = launchctl("bootstrap", domain, plist); err == nil {
+			return nil
+		}
+		if loaded() {
+			_, err = launchctl("kickstart", "-k", service)
+			return err
+		}
+		time.Sleep(time.Duration(attempt) * 3 * step)
+	}
+	return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
 }
 
 // ensureDaemon restarts the service of a user who has connected, for example

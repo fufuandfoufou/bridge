@@ -314,6 +314,10 @@ final class AppModel: ObservableObject {
     /// Whether the user has connected any agent.
     var connected: Bool { status?.agents.contains { $0.hooks } ?? false }
 
+    /// Installed, enabled agents still waiting to be connected, such as one
+    /// installed after the others were connected.
+    var unconnected: [AgentStatus] { (status?.agents ?? []).filter { $0.installed && $0.enabled && !$0.hooks } }
+
     /// Runs an action and surfaces any failure in the shared alert.
     func perform(_ action: () async throws -> Void) async {
         do { try await action() } catch { self.error = error.localizedDescription }
