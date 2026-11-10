@@ -1,0 +1,8 @@
+{"session_id":"","seq":1,"kind":"message","role":"user","content":[{"type":"text","text":"列出目录并修复 main.go 的拼写，token AKIAIOSFODNN7EXAMPLE"}],"ts":"2026-11-09T10:00:00Z"}
+{"session_id":"","seq":2,"kind":"reasoning_stub","role":"assistant","ts":"2026-11-09T10:00:00Z"}
+{"session_id":"","seq":3,"kind":"tool_call","role":"assistant","tool":{"id":"call_ls","canonical_name":"shell","native_name":"shell","args":{"command":"ls"}},"ts":"2026-11-09T10:00:00Z"}
+{"session_id":"","seq":4,"kind":"tool_result","role":"tool","tool":{"id":"call_ls","canonical_name":"","native_name":"","result":"Exit code: 0\nWall time: 0.1 seconds\nOutput:\nmain.go\n","status":"ok"},"ts":"2026-11-09T10:00:00Z"}
+{"session_id":"","seq":5,"kind":"tool_call","role":"assistant","tool":{"id":"call_patch","canonical_name":"edit_file","native_name":"apply_patch","args":{"new":"fmt.Println(\"hi\")","old":"fmt.Pritnln(\"hi\")","path":"main.go"}},"ts":"2026-11-09T10:00:00Z"}
+{"session_id":"","seq":6,"kind":"file_change","role":"assistant","file":{"path":"main.go","op":"modify","diff":"-fmt.Pritnln(\"hi\")\n+fmt.Println(\"hi\")"},"ts":"2026-11-09T10:00:00Z"}
+{"session_id":"","seq":7,"kind":"tool_result","role":"tool","tool":{"id":"call_patch","canonical_name":"","native_name":"","result":"Success. Updated the following files:\nM main.go\n","status":"ok"},"ts":"2026-11-09T10:00:00Z"}
+{"session_id":"","seq":8,"kind":"message","role":"assistant","content":[{"type":"text","text":"拼写已修复。"}],"ts":"2026-11-09T10:00:00Z"}

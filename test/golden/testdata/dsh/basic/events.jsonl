@@ -1,0 +1,5 @@
+{"session_id":"","seq":1,"kind":"message","role":"user","content":[{"type":"text","text":"跑一下测试，密钥 AKIAIOSFODNN7EXAMPLE"}],"ts":"2026-11-09T10:00:02Z"}
+{"session_id":"","seq":2,"kind":"reasoning_stub","role":"assistant","ts":"2026-11-09T10:00:05Z"}
+{"session_id":"","seq":3,"kind":"tool_call","role":"assistant","tool":{"id":"call_t","canonical_name":"shell","native_name":"bash","args":{"command":"go test ./...","description":"tests"}},"ts":"2026-11-09T10:00:05Z"}
+{"session_id":"","seq":4,"kind":"tool_result","role":"tool","tool":{"id":"call_t","canonical_name":"","native_name":"","result":"ok","status":"ok"},"ts":"2026-11-09T10:00:07Z"}
+{"session_id":"","seq":5,"kind":"message","role":"assistant","content":[{"type":"text","text":"测试全部通过。"}],"ts":"2026-11-09T10:00:09Z"}

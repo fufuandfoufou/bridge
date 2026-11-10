@@ -161,6 +161,8 @@ Run the tests:
 go test ./...
 ```
 
+Every pull request runs formatting, vet, the full test suite and the race detector on GitHub Actions. `test/golden` holds reviewed conversion output: each agent's sample session → unified events → the native format written to every other agent, plus the handoff document. After changing conversion logic, run `go test ./test/golden -update` to rewrite the baselines, and review the diff line by line before committing it.
+
 Acceptance tests live in `test/acceptance` and run entirely under an isolated HOME, never touching real agent data.
 
 Adapters for new agents are welcome. Start by passing `bridge adapter test <id>`.

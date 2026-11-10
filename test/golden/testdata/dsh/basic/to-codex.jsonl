@@ -1,0 +1,9 @@
+{"ordinal":1,"payload":{"cli_version":"0.144.1","cwd":"/work/demo","id":"golden-target","model_provider":"openai","originator":"bridge","source":"cli","thread_source":"user","timestamp":"2026-11-10T12:00:00.000Z"},"timestamp":"2026-11-10T12:00:00.000Z","type":"session_meta"}
+{"ordinal":2,"payload":{"approval_policy":"on-request","cwd":"/work/demo","model":"","sandbox_policy":{"type":"read-only"},"summary":"auto"},"timestamp":"2026-11-10T12:00:00.000Z","type":"turn_context"}
+{"ordinal":3,"payload":{"content":[{"text":"[bridge 交接] 这个会话从 dsh 迁移而来，迁移时间 2026-11-10T12:00:00Z。\n以下工具调用来自其他 agent，你当前可用的工具可能不同，请不要假定它们可以直接调用。\n已省略 1 段推理内容。","type":"input_text"}],"role":"developer","type":"message"},"timestamp":"2026-11-10T12:00:00.000Z","type":"response_item"}
+{"ordinal":4,"payload":{"content":[{"text":"跑一下测试，密钥 [REDACTED:aws_access_key]","type":"input_text"}],"role":"user","type":"message"},"timestamp":"2026-11-09T10:00:02.000Z","type":"response_item"}
+{"ordinal":5,"payload":{"images":[],"message":"跑一下测试，密钥 [REDACTED:aws_access_key]","type":"user_message"},"timestamp":"2026-11-09T10:00:02.000Z","type":"event_msg"}
+{"ordinal":6,"payload":{"arguments":"{\"command\":[\"bash\",\"-lc\",\"go test ./...\"]}","call_id":"call_t","name":"shell","type":"function_call"},"timestamp":"2026-11-09T10:00:05.000Z","type":"response_item"}
+{"ordinal":7,"payload":{"call_id":"call_t","output":"ok","type":"function_call_output"},"timestamp":"2026-11-09T10:00:07.000Z","type":"response_item"}
+{"ordinal":8,"payload":{"content":[{"text":"测试全部通过。","type":"output_text"}],"role":"assistant","type":"message"},"timestamp":"2026-11-09T10:00:09.000Z","type":"response_item"}
+{"ordinal":9,"payload":{"message":"测试全部通过。","type":"agent_message"},"timestamp":"2026-11-09T10:00:09.000Z","type":"event_msg"}

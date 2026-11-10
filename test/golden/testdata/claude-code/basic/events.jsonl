@@ -1,0 +1,13 @@
+{"session_id":"","seq":1,"kind":"message","role":"user","content":[{"type":"text","text":"帮我把 config.go 里的超时改成 30 秒，key 是 AKIAIOSFODNN7EXAMPLE"}],"ts":"2026-11-09T10:00:00Z"}
+{"session_id":"","seq":2,"kind":"reasoning_stub","role":"assistant","ts":"2026-11-09T10:01:00Z"}
+{"session_id":"","seq":3,"kind":"message","role":"assistant","content":[{"type":"text","text":"先看一下文件。"}],"ts":"2026-11-09T10:01:00Z"}
+{"session_id":"","seq":4,"kind":"tool_call","role":"assistant","tool":{"id":"toolu_read","canonical_name":"read_file","native_name":"Read","args":{"path":"/work/demo/config.go"}},"ts":"2026-11-09T10:02:00Z"}
+{"session_id":"","seq":5,"kind":"tool_result","role":"tool","tool":{"id":"toolu_read","canonical_name":"","native_name":"","result":"timeout := 10 * time.Second","status":"ok"},"ts":"2026-11-09T10:03:00Z"}
+{"session_id":"","seq":6,"kind":"tool_call","role":"assistant","tool":{"id":"toolu_edit","canonical_name":"edit_file","native_name":"Edit","args":{"new":"30 * time.Second","old":"10 * time.Second","path":"/work/demo/config.go"}},"ts":"2026-11-09T10:04:00Z"}
+{"session_id":"","seq":7,"kind":"file_change","role":"assistant","file":{"path":"/work/demo/config.go","op":"modify","diff":"-10 * time.Second\n+30 * time.Second"},"ts":"2026-11-09T10:04:00Z"}
+{"session_id":"","seq":8,"kind":"tool_result","role":"tool","tool":{"id":"toolu_edit","canonical_name":"","native_name":"","result":"ok","status":"ok"},"ts":"2026-11-09T10:05:00Z"}
+{"session_id":"","seq":9,"kind":"tool_call","role":"assistant","tool":{"id":"toolu_bash","canonical_name":"shell","native_name":"Bash","args":{"command":"go test ./...","description":"run tests"}},"ts":"2026-11-09T10:06:00Z"}
+{"session_id":"","seq":10,"kind":"tool_result","role":"tool","tool":{"id":"toolu_bash","canonical_name":"","native_name":"","result":"ok  demo 0.2s","status":"ok"},"ts":"2026-11-09T10:07:00Z"}
+{"session_id":"","seq":11,"kind":"tool_call","role":"assistant","tool":{"id":"toolu_mcp","canonical_name":"mcp_call","native_name":"mcp__docs__search","args":{"args":{"query":"timeout"},"server":"docs","tool":"search"}},"ts":"2026-11-09T10:08:00Z"}
+{"session_id":"","seq":12,"kind":"tool_result","role":"tool","tool":{"id":"toolu_mcp","canonical_name":"","native_name":"","result":"no results","status":"ok"},"ts":"2026-11-09T10:09:00Z"}
+{"session_id":"","seq":13,"kind":"message","role":"assistant","content":[{"type":"text","text":"已改成 30 秒，测试通过。"}],"ts":"2026-11-09T10:10:00Z"}

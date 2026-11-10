@@ -399,12 +399,18 @@ func Document(s model.Session, r Result) string {
 	fmt.Fprintf(&b, "## 迁移损失\n\n这是降级生成的交接文档，不是完整的原生会话。\n\n- 省略推理：%d 段\n- 降级为文本的工具调用：%d 个\n- 压缩为摘要的轮次：%d 轮\n- 截断的工具结果：%d 个\n- 截断的消息：%d 条\n\n",
 		r.ReasoningOmit, r.Degraded, r.SummarizedTurns, r.TruncatedTools, r.TruncatedMessages)
 	b.WriteString("## 对话记录\n\n")
+	inList := false
 	for _, e := range r.Events {
 		switch e.Kind {
 		case model.KindMessage:
+			if inList { // end the tool list, or Markdown folds the message into it
+				b.WriteString("\n")
+				inList = false
+			}
 			fmt.Fprintf(&b, "**%s**：%s\n\n", e.Role, e.Text())
 		case model.KindToolCall:
 			fmt.Fprintf(&b, "- 工具 `%s`：`%s`\n", e.Tool.CanonicalName, clip(string(e.Tool.Args), 300))
+			inList = true
 		case model.KindToolResult:
 			if e.Tool.Result != "" {
 				fmt.Fprintf(&b, "  - 结果：%s\n", oneLine(e.Tool.Result, 300))
