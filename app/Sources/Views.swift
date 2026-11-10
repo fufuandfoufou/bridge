@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 enum Page: String, CaseIterable, Identifiable {
-    case overview = "概览", sessions = "会话迁移", files = "规则与 Skill", claims = "文件认领", tasks = "任务看板", memory = "记忆", settings = "设置"
+    case overview = "概览", sessions = "会话迁移", files = "规则、Skill 与 MCP", claims = "文件认领", tasks = "任务看板", memory = "记忆", settings = "设置"
     var id: String { rawValue }
     var icon: String {
         switch self {
@@ -473,12 +473,12 @@ struct FilesView: View {
             .padding(12)
             Divider()
             if actions.isEmpty {
-                ContentUnavailableMessage(title: "没有需要同步的内容", detail: "在项目根目录放一份 AGENTS.md，或在 .agents/skills 下添加 skill。")
+                ContentUnavailableMessage(title: "没有需要同步的内容", detail: "在项目根目录放一份 AGENTS.md，或在 .agents/skills 下添加 skill；MCP server 写在 .agents/mcp.toml。")
             } else {
                 Table(actions) {
                     TableColumn("状态") { a in Text(a.kindName).foregroundStyle(a.needsAttention ? Color.orange : Color.primary) }.width(80)
                     TableColumn("Agent") { Text(Names.agent($0.agent)) }.width(90)
-                    TableColumn("目标") { Text($0.target).lineLimit(1).truncationMode(.middle).help($0.target) }
+                    TableColumn("目标") { Text($0.displayTarget).lineLimit(1).truncationMode(.middle).help($0.displayTarget) }
                     TableColumn("说明") { Text($0.displayReason).lineLimit(1).help($0.displayReason) }
                 }
             }
@@ -499,7 +499,7 @@ struct FilesView: View {
                 .padding(12)
             }
         }
-        .navigationTitle("规则与 Skill")
+        .navigationTitle("规则、Skill 与 MCP")
         .toolbar {
             if busy { ProgressView().controlSize(.small) }
             Button { reload() } label: { Label("刷新", systemImage: "arrow.clockwise") }
@@ -510,7 +510,7 @@ struct FilesView: View {
             Button("取消", role: .cancel) {}
             Button("覆盖", role: .destructive) { sync(["--force"]) }
         } message: {
-            ForEachText(attention.map(\.target))
+            ForEachText(attention.map(\.displayTarget))
         }
         .task {
             // The remembered project may have been moved or deleted.
@@ -672,7 +672,7 @@ struct AddMemorySheet: View {
                 Text("当前项目").tag("project")
             }.pickerStyle(.segmented)
             if scope == "project" {
-                Text(dir.isEmpty ? tr("请先在“规则与 Skill”页选择项目。") : dir).font(.callout).foregroundStyle(.secondary).lineLimit(1)
+                Text(dir.isEmpty ? tr("请先在“规则、Skill 与 MCP”页选择项目。") : dir).font(.callout).foregroundStyle(.secondary).lineLimit(1)
             }
             HStack {
                 Spacer()
@@ -735,6 +735,11 @@ struct SettingsView: View {
                 toggle("项目记忆", c.projectMemory, "sync.project_memory").disabled(!c.memory)
                 toggle("规则文件", c.rules, "sync.rules")
                 toggle("Skill", c.skills, "sync.skills.enabled")
+                toggle("MCP 配置", c.mcpConfigs, "sync.mcp_configs")
+                if c.mcpConfigs {
+                    Text("MCP server 以 ~/.config/bridge/mcp.toml（全局）和项目的 .agents/mcp.toml 为源，写入各 agent 自己的配置。已有的同名配置不会被覆盖。")
+                        .font(.callout).foregroundStyle(.secondary)
+                }
             }
             Section("Agent") {
                 ForEach(model.status?.agents.filter(\.installed) ?? []) { a in
@@ -798,6 +803,11 @@ struct SettingsView: View {
             }
             Section("排除的 Skill") {
                 PatternList(values: c.excludeSkills, placeholder: "例如 private-*", onSave: { set("sync.skills.exclude", tomlArray($0)) })
+            }
+            if c.mcpConfigs {
+                Section("排除的 MCP server") {
+                    PatternList(values: c.mcpExclude, placeholder: "例如 node_repl", onSave: { set("sync.mcp_exclude", tomlArray($0)) })
+                }
             }
             Section("自定义脱敏规则") {
                 PatternList(values: c.redact, placeholder: "正则表达式", onSave: { set("privacy.redact", tomlArray($0)) })

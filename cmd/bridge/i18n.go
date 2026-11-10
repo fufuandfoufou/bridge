@@ -27,7 +27,15 @@ var messagesEN = map[string]string{
 	"规则源和副本都被修改过，两边都已保留；请手工合并后再同步": "Both the source and the copy changed. Both were kept; merge them by hand, then sync.", "已把副本内容合回规则源": "Copy merged back into the source",
 	"这个 agent 不支持自动检测，只能手动启用": "This agent has no automatic check and can only be enabled by hand", "客户端未能继续探测会话": "The client couldn't continue the probe session", "客户端未能在限定时间内继续探测会话": "The client didn't continue the probe session in time", "客户端加载了探测会话，但历史内容缺失": "The client loaded the probe session, but its history is missing",
 	"缺少目标 agent": "No target agent specified", "项目记忆需要先选择项目目录": "Choose a project folder for project memories first", "记忆内容不能为空": "Memory content can't be empty", "只能编辑生效中或待审核的记忆": "Only active or pending memories can be edited", "无法确定该 agent 的版本": "Can't determine this agent's version",
-	"任务需要先选择项目目录": "Choose a project folder for the task first", "任务标题不能为空": "Task title can't be empty", "not found": "Not found",
+	"新增 MCP server": "New MCP server", "与源一致": "Matches the source", "源已更新": "Source updated", "已从源中删除": "Removed from the source",
+	"被手工修改过；可合回源，或以源为准覆盖":                    "Edited by hand. Merge it into the source, or overwrite it from the source.",
+	"已有同名但内容不同的配置，不会自动覆盖；可合回源，或以源为准覆盖":       "A different server with the same name exists and won't be overwritten. Merge it into the source, or overwrite it from the source.",
+	"已在这个 agent 中被删除；可以以源为准重新写入，或合回源（从源中删除）": "Deleted in this agent. Write it again from the source, or merge back (remove it from the source).",
+	"已从源中删除，但这里被手工修改过；可合回源，或以源为准删除":          "Removed from the source, but edited here by hand. Merge it back, or delete it as the source says.",
+	"这个 agent 不支持同步 MCP 配置":                  "This agent can't sync MCP configuration", "这个 agent 没有该范围的 MCP 配置": "This agent has no MCP configuration for this scope",
+	"MCP 配置同步已关闭（sync.mcp_configs）": "MCP configuration sync is off (sync.mcp_configs)", "Claude Code 的 MCP 配置不支持 cwd": "Claude Code's MCP configuration doesn't support cwd",
+	"Codex 不支持 SSE 传输的 MCP server": "Codex doesn't support MCP servers over SSE",
+	"任务需要先选择项目目录":                  "Choose a project folder for the task first", "任务标题不能为空": "Task title can't be empty", "not found": "Not found",
 	"数据库可打开": "Database opens", "数据库权限为 0600": "Database permissions are 0600", "守护进程在线": "Daemon is online",
 }
 
@@ -36,6 +44,8 @@ var patternsEN = []struct {
 	with string
 }{
 	{regexp.MustCompile(`^恢复命令：(.*)$`), "Resume command: $1"},
+	{regexp.MustCompile(`^只在 (.*) 中配置；可合回源后同步给其他 agent$`), "Configured only in $1. Merge it into the source to sync it to the other agents."},
+	{regexp.MustCompile(`^还没有 MCP 源（(.*)），两边也都没有可同步的 server$`), "No MCP source yet ($1), and no servers to sync on either side"},
 	{regexp.MustCompile(`(?s)^目标 agent 不支持原生写回（版本 (.*)），已生成交接文档：(.*)\n请在目标 agent 中引用这个文件。$`), "The target agent doesn't support native write-back (version $1). Handoff document created: $2\nReference this file in the target agent."},
 	{regexp.MustCompile(`(?s)^目标 agent 不支持原生写回（版本 (.*)），已生成交接文档：(.*)\n下次在该项目启动 (.*) 时会自动注入。$`), "The target agent doesn't support native write-back (version $1). Handoff document created: $2\nIt will be injected the next time $3 starts in this project."},
 	{regexp.MustCompile(`^上次同步被中断，且 (.*) 之后又发生了变化，已停止同步，请手动检查$`), "The last sync was interrupted and $1 has changed since. Syncing stopped; please check it by hand."},

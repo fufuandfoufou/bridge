@@ -64,7 +64,7 @@ agent 的会话文件不是公开接口，版本升级可能改变格式。Bridg
 | 实时协作 | 增量采集、hook 注入进展、MCP 查询（`session_list`、`session_events`、`memory_search`）、文件认领提醒、工作区改动提示 |
 | 任务看板 | 项目内共享任务，`task_add` / `task_claim` / `task_update` / `task_done`，认领是原子的，只有认领者能更新；新会话开始时注入未完成任务 |
 | 记忆 | 全局偏好和项目记忆、自动提取（可选）、冲突取代、审核、删除后不再提取 |
-| 文件同步 | 规则与 Skill 以一份为源、软链接或生成副本、漂移检测、合回源或以源为准 |
+| 文件同步 | 规则与 Skill 以一份为源、软链接或生成副本、漂移检测、合回源或以源为准；MCP server 配置按条目同步（默认关闭） |
 | 配置 | 四层合并、按类别和 agent 开关、同步方向、`why` 解释生效来源 |
 | 桌面应用 | macOS 原生界面和状态栏：查看状态、迁移、暂停同步、管理记忆和设置 |
 
@@ -137,7 +137,8 @@ go build -o bin/bridge ./cmd/bridge
 - Codex 的原生分页会话暂不支持追加更新，只能生成新副本。
 - 文件认领可设为提醒或拦截，只约束接入的 agent 的编辑工具；Shell 命令、手工编辑不受保护，后台离线时不拦截。
 - 后台会监听最近两小时活跃的 git 项目目录（跳过隐藏目录、node_modules、vendor、dist、build、target 等），把其他来源的文件改动告诉 agent。来源只是推测：附近有某个 agent 的编辑工具改过同一文件时标为“可能来自”，否则标为未知。
-- worktree 模式、MCP 配置同步、历史会话导入尚未实现。
+- MCP 配置同步默认关闭，开启方式是 `bridge config` 或设置页里的 `sync.mcp_configs`。源文件是 `~/.config/bridge/mcp.toml`（全局）和项目的 `.agents/mcp.toml`，按条目写入 `~/.claude.json`、`.mcp.json` 和 Codex 的 `config.toml`。已有的同名配置、被手工改过的条目不会被覆盖。Codex 只读取已信任项目里的 `.codex/config.toml`，也不支持 SSE 传输。详见 [docs/mcp-sync.md](docs/mcp-sync.md)。
+- worktree 模式、历史会话导入尚未实现。
 - 目前只支持 macOS。
 
 ## 文档与贡献

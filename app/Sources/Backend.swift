@@ -158,7 +158,7 @@ struct HandoffResult: Decodable {
 }
 
 struct SyncAction: Decodable, Identifiable {
-    var id: String { kind + agent + target }
+    var id: String { kind + agent + target + (name ?? "") }
     let kind: String
     let category: String
     let agent: String
@@ -166,6 +166,10 @@ struct SyncAction: Decodable, Identifiable {
     let target: String
     let scope: String
     let reason: String
+    let name: String?
+
+    /// Where the change lands; MCP servers are entries inside a config file.
+    var displayTarget: String { name.map { "\(target) · \($0)" } ?? target }
 
     var kindName: String {
         switch kind {
@@ -176,13 +180,15 @@ struct SyncAction: Decodable, Identifiable {
         case "generate": return tr("生成副本")
         case "drift": return tr("副本被修改")
         case "conflict": return tr("内容冲突")
-        case "need_source": return tr("缺少源文件")
+        case "need_source": return category == "mcp" ? tr("只在一边") : tr("缺少源文件")
+        case "remove": return tr("删除")
         default: return kind
         }
     }
 
     var displayReason: String {
         switch kind {
+        case "need_source" where category == "mcp": return tr("只在 %@ 中配置；可用下方“把副本合回源”加入源，再同步给其他 agent", Names.agent(agent))
         case "need_source": return tr("还没有规则源，这里已有内容；可用下方“把副本合回源”把它作为源")
         case "drift": return tr("副本被手工修改；可合回源，或以源为准覆盖")
         default: return reason
@@ -190,7 +196,7 @@ struct SyncAction: Decodable, Identifiable {
     }
 
     var needsAttention: Bool { ["drift", "conflict", "need_source"].contains(kind) }
-    var willChange: Bool { ["link", "relink", "generate"].contains(kind) }
+    var willChange: Bool { ["link", "relink", "generate", "remove"].contains(kind) }
 }
 
 struct PlanReport: Decodable { let actions: [SyncAction] }
@@ -232,6 +238,8 @@ struct Settings: Decodable {
     var projectMemory: Bool
     var rules: Bool
     var skills: Bool
+    var mcpConfigs: Bool
+    var mcpExclude: [String]
     var autoExtract: Bool
     var extractor: String
     var injectOnPrompt: Bool

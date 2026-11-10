@@ -268,3 +268,29 @@ func Degrade(c Capabilities) Effective {
 	}
 	return e
 }
+
+// MCPServer is an MCP server definition in agent-neutral form. Fields only one
+// agent understands travel in Extra, keyed by their native names.
+type MCPServer struct {
+	Transport string            `json:"transport,omitempty" toml:"transport,omitempty"` // "" (stdio), "http" or "sse"
+	Command   string            `json:"command,omitempty" toml:"command,omitempty"`
+	Args      []string          `json:"args,omitempty" toml:"args,omitempty"`
+	Env       map[string]string `json:"env,omitempty" toml:"env,omitempty"`
+	Cwd       string            `json:"cwd,omitempty" toml:"cwd,omitempty"`
+	URL       string            `json:"url,omitempty" toml:"url,omitempty"`
+	Headers   map[string]string `json:"headers,omitempty" toml:"headers,omitempty"`
+	Extra     map[string]any    `json:"extra,omitempty" toml:"-"`
+}
+
+// MCPConfigurer is implemented by adapters whose MCP server configuration
+// bridge can keep in sync.
+type MCPConfigurer interface {
+	// MCPConfigPath is the file holding the MCP servers of a scope ("global"
+	// or "project"), or "" when the agent has none for that scope.
+	MCPConfigPath(scope, projectRoot string) string
+	// ReadMCP returns the servers defined in path; a missing file has none.
+	ReadMCP(path string) (map[string]MCPServer, error)
+	// WriteMCP adds or replaces the servers in set and deletes those in
+	// remove, leaving every other entry and setting as it was.
+	WriteMCP(path string, set map[string]MCPServer, remove []string) error
+}

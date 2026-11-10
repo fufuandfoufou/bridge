@@ -64,7 +64,7 @@ Backups before writing, temp file plus atomic rename, read-back verification, an
 | Live collaboration | Incremental collection, hook-injected progress, MCP queries (`session_list`, `session_events`, `memory_search`), file claim warnings, notes on other workspace changes |
 | Task board | Shared per-project tasks via `task_add` / `task_claim` / `task_update` / `task_done`; claims are atomic and only the holder can update a task; new sessions see unfinished tasks |
 | Memory | Global preferences and project memory, optional automatic extraction, supersession, review, forget without re-extraction |
-| File sync | One source for rules and skills, symlinks or generated copies, drift detection, adopt or overwrite |
+| File sync | One source for rules and skills, symlinks or generated copies, drift detection, adopt or overwrite; MCP server configuration synced entry by entry (off by default) |
 | Configuration | Four merged layers, per-category and per-agent switches, sync direction, `why` explains where a value came from |
 | Desktop app | Native macOS window and menu bar: status, migration, pause syncing, memory and settings |
 
@@ -137,7 +137,8 @@ This is an early project. Please try it on sessions you don't depend on first.
 - Codex's native paginated sessions can't be appended to yet, only copied into a new session.
 - File claims can warn or block, but only cover the edit tools of connected agents: shell commands and manual edits aren't protected, and nothing is blocked while the daemon is offline.
 - The daemon watches the folders of git projects active in the last two hours (skipping hidden folders, node_modules, vendor, dist, build, target and similar) and tells agents about file changes from other sources. The source is only a guess: a change is marked "probably from" an agent when that agent's edit tool touched the same file around then, and unknown otherwise.
-- Worktree mode, MCP config sync, and history import aren't implemented.
+- MCP config sync is off by default; turn on `sync.mcp_configs` in the config or in Settings. The sources are `~/.config/bridge/mcp.toml` (global) and the project's `.agents/mcp.toml`, written entry by entry into `~/.claude.json`, `.mcp.json`, and Codex's `config.toml`. Existing servers with the same name and entries edited by hand are never overwritten. Codex reads `.codex/config.toml` only in trusted projects and doesn't support the SSE transport. See [docs/mcp-sync.md](docs/mcp-sync.md).
+- Worktree mode and history import aren't implemented.
 - macOS only for now.
 
 ## Docs and contributing

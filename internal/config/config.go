@@ -44,6 +44,7 @@ type Sync struct {
 	Rules         bool     `toml:"rules"`
 	RulesSource   string   `toml:"rules_source"`
 	MCPConfigs    bool     `toml:"mcp_configs"`
+	MCPExclude    []string `toml:"mcp_exclude"`
 	ExcludeFiles  []string `toml:"exclude_files"`
 	Skills        Skills   `toml:"skills"`
 }
@@ -135,6 +136,8 @@ project_memory = true
 rules = true
 rules_source = "AGENTS.md"
 mcp_configs = false
+# bridge registers itself; node_repl is provided by the ChatGPT app.
+mcp_exclude = ["bridge", "node_repl"]
 exclude_files = []
 
 [sync.skills]
