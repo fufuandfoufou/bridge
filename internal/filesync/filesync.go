@@ -23,6 +23,8 @@ import (
 
 // Action kinds.
 const (
+	Collect    = "collect"     // move an agent's own skill into the shared directory
+	Dedupe     = "dedupe"      // drop an agent's copy identical to the shared skill
 	Noop       = "noop"        // already correct
 	Skip       = "skip"        // not synced, Reason says why
 	Link       = "link"        // create a symlink
@@ -77,7 +79,7 @@ func Plan(in Input) ([]Action, error) {
 	for _, a := range in.Agents {
 		for _, sc := range scopes {
 			srcRule := filepath.Join(gd, "AGENTS.md")
-			srcSkills := filepath.Join(gd, "skills")
+			srcSkills := SharedSkills()
 			if sc == "project" {
 				srcRule = filepath.Join(in.ProjectRoot, cfg.Sync.RulesSource)
 				srcSkills = filepath.Join(in.ProjectRoot, ".agents", "skills")
@@ -105,7 +107,7 @@ func Plan(in Input) ([]Action, error) {
 			out = append(out, acts...)
 		}
 	}
-	return out, nil
+	return append(out, planLegacy(in)...), nil
 }
 
 func resolve(root string, spec kit.PathSpec) string {
@@ -294,25 +296,46 @@ func planSkills(in Input, a Agent, spec kit.PathSpec, srcDir string) ([]Action, 
 			Reason: "格式未经验证（" + orNone(spec.Format) + "），不同步"}}, nil
 	}
 	if spec.Format == kit.FormatSource && filepath.Clean(base) == filepath.Clean(srcDir) {
-		return nil, nil // this agent reads the source directory directly
+		// The agent reads the shared directory itself; only its own
+		// directory needs collecting.
+		if spec.Scope != "global" || spec.Collect == "" {
+			return nil, nil
+		}
+		return planCollect(in, a, fsutil.Expand(spec.Collect), srcDir, false)
 	}
 	mk := func(name string) Action {
 		return Action{Category: "skill", Agent: a.ID, Source: filepath.Join(srcDir, name),
 			Target: filepath.Join(base, name), Scope: spec.Scope, Format: kit.FormatSymlink}
 	}
-	entries, err := os.ReadDir(srcDir)
-	if os.IsNotExist(err) {
-		return nil, nil
+	var out []Action
+	collecting := map[string]bool{}
+	if spec.Scope == "global" {
+		// Same-name skills present on both sides are planned by planLink
+		// below; collection only adds the agent's skills the shared
+		// directory lacks.
+		more, err := planCollect(in, a, base, srcDir, true)
+		if err != nil {
+			return nil, err
+		}
+		for _, m := range more {
+			if m.Kind == Collect {
+				collecting[filepath.Base(m.Target)] = true
+				out = append(out, m)
+			}
+		}
 	}
-	if err != nil {
+	entries, err := os.ReadDir(srcDir)
+	if err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
-	var out []Action
 	for _, e := range entries {
-		if !e.IsDir() {
+		if !e.IsDir() && e.Type()&os.ModeSymlink == 0 {
 			continue
 		}
 		name := e.Name()
+		if collecting[name] {
+			continue
+		}
 		if _, err := os.Stat(filepath.Join(srcDir, name, "SKILL.md")); err != nil {
 			continue
 		}
@@ -345,6 +368,9 @@ type Options struct {
 type Report struct {
 	Applied []Action
 	Blocked []Action // conflicts and drift left alone
+	// Replan is set when skills moved between directories: a fresh plan
+	// sees links and duplicates this one could not.
+	Replan bool
 }
 
 // Apply executes a plan. Files are backed up before replacement and every
@@ -384,6 +410,19 @@ func Apply(actions []Action, o Options) (Report, error) {
 				actions[i].Reason = "规则源和副本都被修改过，两边都已保留；请手工合并后再同步"
 				continue
 			}
+			if a.Category == "skill" {
+				if a.Kind != Conflict {
+					continue
+				}
+				if err := adoptSkill(a, j); err != nil {
+					return r, fmt.Errorf("adopt %s: %w", a.Target, err)
+				}
+				a.Reason = "已以 " + a.Agent + " 的版本为准，公共目录原版本已备份"
+				a.Kind = Collect
+				r.Applied, r.Replan = append(r.Applied, a), true
+				actions[i].Kind = Noop
+				continue
+			}
 			if err := adopt(a); err != nil {
 				return r, fmt.Errorf("adopt %s: %w", a.Target, err)
 			}
@@ -396,10 +435,14 @@ func Apply(actions []Action, o Options) (Report, error) {
 		}
 	}
 	for _, a := range actions {
-		kind := a.Kind
+		kind, planned := a.Kind, a.Kind
 		if o.Force && (kind == Drift || kind == Conflict) {
 			kind = Generate
-			if a.Format != kit.FormatGenerate {
+			switch {
+			case a.Category == "skill" && a.Format == kit.FormatSource:
+				kind = Dedupe // the agent reads the shared version
+				a.Kind, a.Reason = Dedupe, "已以公共目录的版本为准，本地副本已备份"
+			case a.Format != kit.FormatGenerate:
 				kind = Relink
 			}
 		}
@@ -421,6 +464,30 @@ func Apply(actions []Action, o Options) (Report, error) {
 			if err := writeGenerated(a, j); err != nil {
 				return r, err
 			}
+		case Collect:
+			done, err := collect(a, j)
+			if err != nil {
+				return r, fmt.Errorf("collect %s: %w", a.Target, err)
+			}
+			r.Replan = true
+			if done.Kind != Collect {
+				// Another agent's same-name skill got there first.
+				if done.Kind == Conflict {
+					r.Blocked = append(r.Blocked, done)
+				}
+				continue
+			}
+		case Dedupe:
+			if planned == Dedupe {
+				if again := classifyCollect(a, false); again.Kind != Dedupe {
+					r.Blocked = append(r.Blocked, again) // changed since planning
+					continue
+				}
+			}
+			if err := dedupe(a); err != nil {
+				return r, fmt.Errorf("dedupe %s: %w", a.Target, err)
+			}
+			r.Replan = true
 		}
 		r.Applied = append(r.Applied, a)
 	}
@@ -566,7 +633,7 @@ func gitignore(a Action) error {
 
 type entry struct {
 	Path   string `json:"path"`
-	Kind   string `json:"kind"` // symlink | generated
+	Kind   string `json:"kind"` // symlink | generated | collected
 	Backup string `json:"backup,omitempty"`
 	Link   string `json:"link,omitempty"` // symlink destination bridge created
 }
@@ -638,6 +705,15 @@ func Uninstall() ([]string, error) {
 			if d := filepath.Dir(e.Path); os.Remove(d) == nil {
 				_ = os.Remove(filepath.Dir(d))
 			}
+		case "collected":
+			note, err := restoreCollected(e)
+			if err != nil {
+				return notes, err
+			}
+			if note != "" {
+				notes = append(notes, note)
+			}
+			continue
 		case "generated":
 			data, err := os.ReadFile(e.Path)
 			if err != nil {

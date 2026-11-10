@@ -184,6 +184,8 @@ struct SyncAction: Decodable, Identifiable {
         case "conflict": return tr("内容冲突")
         case "need_source": return category == "mcp" ? tr("只在一边") : tr("缺少源文件")
         case "remove": return tr("删除")
+        case "collect": return tr("收入公共目录")
+        case "dedupe": return tr("去重")
         default: return kind
         }
     }
@@ -198,7 +200,7 @@ struct SyncAction: Decodable, Identifiable {
     }
 
     var needsAttention: Bool { ["drift", "conflict", "need_source"].contains(kind) }
-    var willChange: Bool { ["link", "relink", "generate", "remove"].contains(kind) }
+    var willChange: Bool { ["link", "relink", "generate", "remove", "collect", "dedupe"].contains(kind) }
 }
 
 struct PlanReport: Decodable { let actions: [SyncAction] }

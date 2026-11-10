@@ -65,7 +65,7 @@ Backups before writing, temp file plus atomic rename, read-back verification, an
 | Task board | Shared per-project tasks via `task_add` / `task_claim` / `task_update` / `task_done`; claims are atomic and only the holder can update a task; new sessions see unfinished tasks |
 | Worktree mode (optional) | Each agent works in its own git worktree and branch, so they never overwrite each other's files; all worktrees of a repository share progress, memory, and the task board; a summary shows each worktree's commits, uncommitted changes, and latest activity |
 | Memory | Global preferences and project memory, optional automatic extraction, import from past sessions, supersession, review, forget without re-extraction |
-| File sync | One source for rules and skills, symlinks or generated copies, drift detection, adopt or overwrite; MCP server configuration synced entry by entry (off by default) |
+| File sync | One source for rules, symlinks or generated copies, drift detection, adopt or overwrite; global skills live in `~/.agents/skills` (read directly by Codex, pi and DeepSeek Harness, symlinked per skill for Claude Code), each agent's own skills are moved there, a same-name skill with different content waits for you to pick a version (the other is backed up), and uninstall restores real copies; MCP server configuration synced entry by entry (off by default) |
 | Configuration | Four merged layers, per-category and per-agent switches, sync direction, `why` explains where a value came from |
 | Desktop app | Native macOS window and menu bar: status, migration, pause syncing, memory and settings |
 

@@ -310,7 +310,7 @@ func syncFiles(plan func() ([]filesync.Action, error), o filesync.Options) (file
 		return filesync.Report{}, err
 	}
 	r, err := filesync.Apply(acts, o)
-	if err != nil || o.Adopt == "" {
+	if err != nil || (o.Adopt == "" && !r.Replan) {
 		return r, err
 	}
 	if acts, err = plan(); err != nil {

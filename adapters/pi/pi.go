@@ -145,7 +145,7 @@ func (a *Adapter) Capabilities(v kit.Version) kit.Capabilities {
 		},
 		SkillsDirs: []kit.PathSpec{
 			{Scope: model.ScopeProject, Path: ".agents/skills", Format: kit.FormatSource},
-			{Scope: model.ScopeGlobal, Path: "~/.pi/agent/skills", Format: kit.FormatSymlink},
+			{Scope: model.ScopeGlobal, Path: "~/.agents/skills", Format: kit.FormatSource, Collect: "~/.pi/agent/skills"},
 		},
 		ContextWindow: 128000,
 		Tools:         tools,
