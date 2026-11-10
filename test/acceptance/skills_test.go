@@ -156,3 +156,22 @@ func TestSKILL04_UninstallRestoresCopies(t *testing.T) {
 		t.Error("link bridge created was left behind")
 	}
 }
+
+func TestSKILL05_HomeFolderIsNotAProject(t *testing.T) {
+	e := skillsEnv(t)
+	e.proj = e.home
+	seen := map[string]bool{}
+	for _, l := range strings.Split(e.run("", "plan").out, "\n") {
+		f := strings.Fields(l)
+		if len(f) < 4 || f[1] != "skill" {
+			continue
+		}
+		if seen[f[3]] {
+			t.Errorf("planned twice: %s", l)
+		}
+		seen[f[3]] = true
+	}
+	if len(seen) == 0 {
+		t.Error("no skills planned")
+	}
+}
