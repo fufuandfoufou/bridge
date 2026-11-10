@@ -25,6 +25,7 @@ import (
 	"bridge/internal/project"
 	"bridge/internal/store"
 	"bridge/internal/versions"
+	"bridge/internal/worktree"
 	kit "bridge/pkg/adapterkit"
 )
 
@@ -458,6 +459,35 @@ func apiCmd() *cobra.Command {
 		return memory.LoadImportStatus()
 	})
 	add("memory-import-cancel", cobra.NoArgs, func(context.Context, []string) (any, error) { return nil, cancelImport() })
+	dirFlag(add("worktrees", cobra.NoArgs, func(ctx context.Context, _ []string) (any, error) {
+		if dir == "" {
+			return nil, errNoDir
+		}
+		main, rows, err := listWorktrees(ctx, dir)
+		if rows == nil {
+			rows = []worktreeRow{}
+		}
+		return map[string]any{"main": main, "worktrees": rows}, err
+	}))
+	dirFlag(add("worktree-add <agent>", cobra.ExactArgs(1), func(ctx context.Context, a []string) (any, error) {
+		if dir == "" {
+			return nil, errNoDir
+		}
+		w, err := addWorktree(ctx, dir, a[0], "", "")
+		return map[string]any{"worktree": w, "start": startHint(a[0], w.Path)}, err
+	}))
+	wr := dirFlag(add("worktree-remove <target>", cobra.ExactArgs(1), func(ctx context.Context, a []string) (any, error) {
+		if dir == "" {
+			return nil, errNoDir
+		}
+		main, err := mainCheckout(dir)
+		if err != nil {
+			return nil, err
+		}
+		w, err := worktree.Remove(ctx, main, a[0], force)
+		return w, err
+	}))
+	wr.Flags().BoolVar(&force, "force", false, "discard uncommitted changes")
 	add("resume", cobra.NoArgs, func(context.Context, []string) (any, error) { return nil, fsutil.SetPaused(false) })
 
 	add("ensure-daemon", cobra.NoArgs, func(context.Context, []string) (any, error) {

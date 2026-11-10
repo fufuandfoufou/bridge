@@ -152,10 +152,13 @@ func (in *Ingester) IngestRef(ctx context.Context, a kit.Adapter, r kit.SessionR
 // directory is out of date, such as one indexed by an older version.
 func (in *Ingester) refreshLocation(agent string, r kit.SessionRef) error {
 	x, err := in.Store.GetSession(live.SessionKey(agent, r.NativeID))
-	if err != nil || x.CWD == r.CWD {
+	if err != nil {
 		return nil
 	}
 	p := project.Identify(r.CWD)
+	if x.CWD == r.CWD && x.ProjectID == p.ID {
+		return nil
+	}
 	if err := in.Store.UpsertProject(p); err != nil {
 		return err
 	}
@@ -276,7 +279,7 @@ func (d *Daemon) Handle(req Request) Response {
 			break
 		}
 		p := project.Identify(req.CWD)
-		root := p.Path
+		root := p.Checkout()
 		if canonical, e := filepath.EvalSymlinks(root); e == nil {
 			root = canonical
 		}

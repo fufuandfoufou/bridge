@@ -9,6 +9,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 
+	"bridge/internal/config"
 	"bridge/internal/fsutil"
 	"bridge/internal/store"
 )
@@ -68,15 +69,17 @@ func (d *Daemon) watchWorkspaces(ctx context.Context) {
 				d.Logger.Printf("workspace: %v", err)
 				return
 			}
-			byID := map[string]string{}
+			known := map[string]bool{}
 			for _, p := range projects {
-				byID[p.ID] = p.Path
+				known[p.ID] = true
 			}
+			// Each session's own checkout: worktrees of one project are
+			// watched separately.
 			for _, s := range list {
-				root := byID[s.ProjectID]
-				if root == "" {
+				if !known[s.ProjectID] || s.CWD == "" {
 					continue
 				}
+				root := config.ProjectRoot(s.CWD)
 				if _, err := os.Stat(filepath.Join(root, ".git")); err != nil {
 					continue
 				}

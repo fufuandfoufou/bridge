@@ -37,6 +37,7 @@ var messagesEN = map[string]string{
 	"Codex 不支持 SSE 传输的 MCP server": "Codex doesn't support MCP servers over SSE",
 	"记忆同步已关闭（sync.memory），不能导入":    "Memory sync is off (sync.memory), so nothing can be imported", "同步已暂停，恢复后再导入": "Sync is paused. Resume it before importing.",
 	"已有一个历史导入正在进行": "An import is already running",
+	"请先选择项目目录":     "Choose a project folder first",
 	"任务需要先选择项目目录":  "Choose a project folder for the task first", "任务标题不能为空": "Task title can't be empty", "not found": "Not found",
 	"数据库可打开": "Database opens", "数据库权限为 0600": "Database permissions are 0600", "守护进程在线": "Daemon is online",
 }
@@ -46,6 +47,9 @@ var patternsEN = []struct {
 	with string
 }{
 	{regexp.MustCompile(`^恢复命令：(.*)$`), "Resume command: $1"},
+	{regexp.MustCompile(`^(.*) 不是 git 仓库$`), "$1 is not a git repository"},
+	{regexp.MustCompile(`^未知的 agent：(.*)$`), "Unknown agent: $1"},
+	{regexp.MustCompile(`^(.*) 有 (\d+) 个未提交的改动；提交后再删除，或强制删除（改动会丢失）$`), "$1 has $2 uncommitted changes. Commit them first, or force the deletion (the changes are lost)."},
 	{regexp.MustCompile(`^只在 (.*) 中配置；可合回源后同步给其他 agent$`), "Configured only in $1. Merge it into the source to sync it to the other agents."},
 	{regexp.MustCompile(`^还没有 MCP 源（(.*)），两边也都没有可同步的 server$`), "No MCP source yet ($1), and no servers to sync on either side"},
 	{regexp.MustCompile(`(?s)^目标 agent 不支持原生写回（版本 (.*)），已生成交接文档：(.*)\n请在目标 agent 中引用这个文件。$`), "The target agent doesn't support native write-back (version $1). Handoff document created: $2\nReference this file in the target agent."},
