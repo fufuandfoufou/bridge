@@ -1,9 +1,7 @@
 // Package dsh adapts DeepSeek Harness (github.com/deepseek-ai/deepseek-harness).
 // Its sessions are versioned event logs, Zstandard-compressed by default,
 // under $DSH_HOME/sessions/--<cwd>--/<session>/session.vN.jsonl[.zstd].
-// The format is still a developer preview, so bridge only reads it: dsh's
-// progress and history reach other agents, and migrations into dsh use a
-// handoff document instead of a native session.
+// Native writes are gated on the installed version and real-client probes.
 package dsh
 
 import (
@@ -28,6 +26,7 @@ import (
 	"bridge/adapters/internal/common"
 	"bridge/internal/fsutil"
 	"bridge/internal/model"
+	"bridge/internal/versions"
 	kit "bridge/pkg/adapterkit"
 )
 
@@ -130,12 +129,12 @@ var tools = []kit.ToolMapping{
 	{Canonical: model.ToolSubagent, Native: "subagent"},
 }
 
-// Capabilities implements Adapter. Sessions are read only; see the package
-// comment.
+// Capabilities implements Adapter.
 func (a *Adapter) Capabilities(v kit.Version) kit.Capabilities {
 	return kit.Capabilities{
-		SessionRead: true,
-		LiveTail:    true,
+		SessionRead:  true,
+		SessionWrite: string(v) == "0.2.2-rc.1" || versions.Allowed(ID, string(v)),
+		LiveTail:     true,
 		RulesFiles: []kit.PathSpec{
 			{Scope: model.ScopeProject, Path: "AGENTS.md", Format: kit.FormatSource},
 			{Scope: model.ScopeGlobal, Path: "~/.dsh/AGENTS.md", Format: kit.FormatGenerate},
@@ -149,13 +148,8 @@ func (a *Adapter) Capabilities(v kit.Version) kit.Capabilities {
 	}
 }
 
-// WriteSession implements Adapter: dsh sessions are not written natively.
-func (a *Adapter) WriteSession(ctx context.Context, s model.Session, events []model.Event) (kit.NativeHandle, error) {
-	return kit.NativeHandle{}, kit.ErrNotSupported
-}
-
-// InstallHooks implements Adapter. dsh has no shell hooks and bridge only
-// reads its sessions, so connecting needs no change on its side.
+// InstallHooks implements Adapter. dsh exposes no shell hooks, so connecting
+// needs no hook configuration on its side.
 func (a *Adapter) InstallHooks(ctx context.Context, cfg kit.HookConfig) error { return nil }
 
 // UninstallHooks implements Adapter.
@@ -399,7 +393,27 @@ func (a *Adapter) ReadSession(ctx context.Context, ref kit.SessionRef, from mode
 
 func parse(e event, raw []byte) []model.Event {
 	ts := time.UnixMilli(e.Time).UTC()
-	ref := common.Compact(raw)
+	messagePath := []string{"data", "message"}
+	if e.Type == "user/message" {
+		messagePath = messagePath[:1]
+	}
+	ref := common.WithoutReasoning(raw, messagePath...)
+	if e.Type == "assistant/message" && len(ref) > 0 {
+		// Provider streams and replay state duplicate private reasoning and signatures.
+		var top, data, message, source map[string]json.RawMessage
+		_ = json.Unmarshal(ref, &top)
+		_ = json.Unmarshal(top["data"], &data)
+		_ = json.Unmarshal(data["message"], &message)
+		_ = json.Unmarshal(message["source"], &source)
+		delete(data, "stream")
+		if source != nil {
+			delete(source, "replayState")
+			message["source"] = common.MustJSON(source)
+		}
+		data["message"] = common.MustJSON(message)
+		top["data"] = common.MustJSON(data)
+		ref = common.MustJSON(top)
+	}
 	mk := func(ev model.Event) model.Event { ev.TS, ev.NativeRef = ts, ref; return ev }
 	switch e.Type {
 	case "user/message":
@@ -428,8 +442,8 @@ func parse(e event, raw []byte) []model.Event {
 				if strings.TrimSpace(b.Text) != "" {
 					out = append(out, mk(model.TextEvent(model.RoleAssistant, b.Text, ts)))
 				}
-			case "reasoning", "thinking":
-				out = append(out, mk(model.Event{Kind: model.KindReasoning, Role: model.RoleAssistant}))
+			case "reasoning", "thinking", "redacted_thinking":
+				out = append(out, model.Event{Kind: model.KindReasoning, Role: model.RoleAssistant, TS: ts})
 			case "tool-call":
 				t := ToCanonical(b.Name, json.RawMessage(b.Arguments))
 				t.ID = b.ID
@@ -476,7 +490,8 @@ func ToCanonical(name string, args json.RawMessage) *model.ToolCall {
 	str := func(k string) string { s, _ := a[k].(string); return s }
 	set := func(c string, m map[string]any) {
 		for k, v := range m {
-			if v == nil || v == "" {
+			// Empty file contents and edit replacements are meaningful values.
+			if v == nil || (v == "" && k != "content" && k != "old" && k != "new") {
 				delete(m, k)
 			}
 		}
@@ -486,9 +501,9 @@ func ToCanonical(name string, args json.RawMessage) *model.ToolCall {
 	case "read":
 		set(model.ToolReadFile, map[string]any{"path": str("file_path"), "offset": a["offset"], "limit": a["limit"]})
 	case "write":
-		set(model.ToolWriteFile, map[string]any{"path": str("file_path"), "content": str("content")})
+		set(model.ToolWriteFile, map[string]any{"path": str("file_path"), "content": a["content"]})
 	case "edit":
-		set(model.ToolEditFile, map[string]any{"path": str("file_path"), "old": str("old_string"), "new": str("new_string"), "replace_all": a["replace_all"]})
+		set(model.ToolEditFile, map[string]any{"path": str("file_path"), "old": a["old_string"], "new": a["new_string"], "replace_all": a["replace_all"]})
 	case "bash":
 		set(model.ToolShell, map[string]any{"command": str("command"), "description": str("description")})
 	case "grep":

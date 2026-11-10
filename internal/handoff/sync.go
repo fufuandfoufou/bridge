@@ -1,12 +1,14 @@
 package handoff
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"bridge/internal/fsutil"
@@ -100,14 +102,16 @@ func LinkState(st *store.Store, l store.ConversationLink) (ConversationState, er
 }
 
 type syncJournal struct {
-	Path     string `json:"path"`
-	Before   int64  `json:"before"`
-	Expected int64  `json:"expected"`
-	Source   string `json:"source"`
-	Target   string `json:"target"`
-	To       string `json:"to"`
-	ToAgent  string `json:"to_agent"`
-	FromSeq  int64  `json:"from_seq"` // last event of the sending side included
+	Path       string `json:"path"`
+	Before     int64  `json:"before"`
+	Expected   int64  `json:"expected"`
+	Source     string `json:"source"`
+	Target     string `json:"target"`
+	To         string `json:"to"`
+	ToAgent    string `json:"to_agent"`
+	FromSeq    int64  `json:"from_seq"` // last event of the sending side included
+	BeforeHash string `json:"before_hash,omitempty"`
+	AppendData []byte `json:"append_data,omitempty"`
 }
 
 func syncJournalPath() string { return filepath.Join(fsutil.DataDir(), "sync-journal.json") }
@@ -128,12 +132,34 @@ func recoverSync(ctx context.Context, d SyncDeps) error {
 	if err := json.Unmarshal(b, &j); err != nil {
 		return err
 	}
+	if target, ok := d.Registry.Get(j.ToAgent); ok {
+		if locker, ok := target.(kit.SessionWriteLocker); ok {
+			release, err := locker.LockSession(kit.SessionRef{Path: j.Path, NativeID: strings.TrimPrefix(j.To, j.ToAgent+":")})
+			if err != nil {
+				return err
+			}
+			defer release()
+		}
+	}
 	st, err := os.Stat(j.Path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return os.Remove(syncJournalPath())
 		}
 		return err
+	}
+	changed := fmt.Errorf("上次同步被中断，且无法确认 %s 中的内容仍属于这次写入，已停止同步，请手动检查", j.Path)
+	if st.Size() != j.Before {
+		if len(j.AppendData) == 0 || j.Before < 0 || st.Size() < j.Before || st.Size() > j.Expected || j.Expected-j.Before != int64(len(j.AppendData)) {
+			return changed
+		}
+		raw, err := os.ReadFile(j.Path)
+		if err != nil {
+			return err
+		}
+		if int64(len(raw)) != st.Size() || fsutil.HashString(string(raw[:j.Before])) != j.BeforeHash || !bytes.Equal(raw[j.Before:], j.AppendData[:int64(len(raw))-j.Before]) {
+			return changed
+		}
 	}
 	switch {
 	case st.Size() == j.Expected:
@@ -146,7 +172,7 @@ func recoverSync(ctx context.Context, d SyncDeps) error {
 	case st.Size() == j.Before:
 		return os.Remove(syncJournalPath())
 	}
-	return fmt.Errorf("上次同步被中断，且 %s 之后又发生了变化，已停止同步，请手动检查", j.Path)
+	return changed
 }
 
 // finishSync moves the link past what was appended. The sending side's
@@ -261,6 +287,13 @@ func SyncConversation(ctx context.Context, d SyncDeps, id, prefer string) (*Sync
 		return &SyncResult{State: "blocked", From: from.Agent, To: to.Agent,
 			Message: fmt.Sprintf("%s 的这个会话正在使用，退出后再更新，否则可能造成分叉。", to.Agent)}, nil
 	}
+	if locker, ok := target.(kit.SessionWriteLocker); ok {
+		release, err := locker.LockSession(ref)
+		if err != nil {
+			return nil, err
+		}
+		defer release()
+	}
 	events, err := d.Store.Events(from.ID, fromSeq, 0)
 	if err != nil {
 		return nil, err
@@ -336,7 +369,11 @@ func appendAndVerify(ctx context.Context, a kit.Adapter, ref kit.SessionRef, dat
 	if err != nil {
 		return err
 	}
-	if st.Size() > 0 {
+	if validator, ok := a.(kit.SessionAppendValidator); ok {
+		if err := validator.ValidateAppend(ref); err != nil {
+			return err
+		}
+	} else if st.Size() > 0 {
 		f, err := os.Open(ref.Path)
 		if err != nil {
 			return err
@@ -355,6 +392,11 @@ func appendAndVerify(ctx context.Context, a kit.Adapter, ref kit.SessionRef, dat
 		return err
 	}
 	j.Path, j.Before, j.Expected = ref.Path, st.Size(), st.Size()+int64(len(data))
+	j.BeforeHash, err = fsutil.HashFile(ref.Path)
+	if err != nil {
+		return err
+	}
+	j.AppendData = data
 	entry, _ := json.Marshal(j)
 	if err := fsutil.EnsurePrivateDir(fsutil.DataDir()); err != nil {
 		return err
@@ -367,6 +409,9 @@ func appendAndVerify(ctx context.Context, a kit.Adapter, ref kit.SessionRef, dat
 		return err
 	}
 	_, err = f.Write(data)
+	if err == nil {
+		err = f.Sync()
+	}
 	if e := f.Close(); err == nil {
 		err = e
 	}

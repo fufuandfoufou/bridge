@@ -320,7 +320,7 @@ func parseMessage(e entry, raw []byte) []model.Event {
 		return nil
 	}
 	ts := common.ParseTime(e.Timestamp)
-	ref := common.Compact(raw)
+	ref := common.WithoutReasoning(raw, "message")
 	mk := func(ev model.Event) model.Event { ev.TS, ev.NativeRef = ts, ref; return ev }
 	var out []model.Event
 	switch m.Role {
@@ -334,8 +334,8 @@ func parseMessage(e entry, raw []byte) []model.Event {
 			case "image":
 				out = append(out, mk(model.Event{Kind: model.KindMessage, Role: m.Role,
 					Content: []model.ContentPart{{Type: "image_ref", Ref: "inline-image", Text: "[图片]"}}}))
-			case "thinking":
-				out = append(out, mk(model.Event{Kind: model.KindReasoning, Role: model.RoleAssistant}))
+			case "thinking", "redacted_thinking", "reasoning":
+				out = append(out, model.Event{Kind: model.KindReasoning, Role: model.RoleAssistant, TS: ts})
 			case "toolCall":
 				t := ToCanonical(b.Name, b.Arguments)
 				t.ID = b.ID

@@ -177,6 +177,18 @@ type SessionAppender interface {
 	AfterAppend(ctx context.Context, ref SessionRef) error
 }
 
+// SessionWriteLocker holds an agent's native cross-process lease while Bridge
+// appends, verifies, or recovers a session. Closing the process releases it.
+type SessionWriteLocker interface {
+	LockSession(ref SessionRef) (release func(), err error)
+}
+
+// SessionAppendValidator validates native framing instead of the default JSONL
+// newline check, for example when the file contains compressed frames.
+type SessionAppendValidator interface {
+	ValidateAppend(ref SessionRef) error
+}
+
 // VersionProber is optionally implemented when an adapter can check, with the
 // real client and without touching user data, that an agent version loads the
 // sessions it writes.
@@ -244,7 +256,7 @@ func Degrade(c Capabilities) Effective {
 	hooks := c.HasHook(HookSessionStart) && c.HasHook(HookPromptSubmit)
 	e := Effective{}
 	switch {
-	case c.SessionWrite && hooks:
+	case c.SessionWrite:
 		e.Handoff = "原生写回"
 	case !hooks:
 		e.Handoff = "生成交接文档，用户手动引用"

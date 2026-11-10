@@ -178,6 +178,8 @@ func apiCmd() *cobra.Command {
 					command = "codex resume " + prior.NativeID
 				case "claude-code":
 					command = "claude --resume " + prior.NativeID
+				case "dsh":
+					command = "dsh headless --session-id " + prior.NativeID + " -"
 				}
 				return map[string]any{"mode": "duplicate", "message": "24 小时内已经迁移过这个会话（" + prior.EndedAt.Local().Format("15:04") + "）。",
 					"resume_command": command, "document_path": "", "tokens": 0, "reasoning": 0, "degraded": 0, "summarized": 0, "truncated": 0}, nil
