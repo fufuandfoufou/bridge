@@ -73,7 +73,9 @@ func Plan(in Input) ([]Action, error) {
 	}
 	cfg := in.Config
 	scopes := []string{"global"}
-	if in.ProjectRoot != "" {
+	// In the home folder the project paths are the global ones; planning
+	// both would list every skill and rule twice.
+	if in.ProjectRoot != "" && !samePath(in.ProjectRoot, fsutil.Home()) {
 		scopes = append(scopes, "project")
 	}
 	for _, a := range in.Agents {
@@ -108,6 +110,16 @@ func Plan(in Input) ([]Action, error) {
 		}
 	}
 	return append(out, planLegacy(in)...), nil
+}
+
+func samePath(a, b string) bool {
+	if x, err := filepath.EvalSymlinks(a); err == nil {
+		a = x
+	}
+	if y, err := filepath.EvalSymlinks(b); err == nil {
+		b = y
+	}
+	return filepath.Clean(a) == filepath.Clean(b)
 }
 
 func resolve(root string, spec kit.PathSpec) string {
