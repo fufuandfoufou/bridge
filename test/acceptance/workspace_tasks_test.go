@@ -206,3 +206,57 @@ func TestTASK01_SharedBoard(t *testing.T) {
 		t.Fatal(r.out)
 	}
 }
+
+// Changes git itself makes (checkout, pull) match the commit and are not
+// news; edits, new files and deletions are, labelled by what git sees.
+func TestWorkspaceChangesIgnoreGitOperations(t *testing.T) {
+	e := newEnv(t)
+	repo := e.proj
+	must(t, os.RemoveAll(filepath.Join(repo, ".git")))
+	gitIn(t, repo, "init", "-q", "-b", "main")
+	write(t, filepath.Join(repo, "a.go"), "package a\n")
+	write(t, filepath.Join(repo, "b.go"), "package b\n")
+	gitIn(t, repo, "add", ".")
+	gitIn(t, repo, "commit", "-qm", "one")
+	gitIn(t, repo, "checkout", "-qb", "other")
+	write(t, filepath.Join(repo, "a.go"), "package a // other branch\n")
+	gitIn(t, repo, "commit", "-qam", "two")
+	gitIn(t, repo, "checkout", "-q", "main")
+
+	s := e.store()
+	seedSession(t, s, "claude-code:A", "claude-code", repo, "a1")
+	stop := startDaemon(t, e)
+	defer stop()
+	time.Sleep(400 * time.Millisecond)
+
+	gitIn(t, repo, "checkout", "-q", "other") // rewrites a.go
+	time.Sleep(1500 * time.Millisecond)
+	if got, _ := s.WorkspaceChanges(projID(repo), 0, time.Time{}, 100); len(got) != 0 {
+		t.Errorf("a checkout was reported as work: %+v", got)
+	}
+
+	// An editor's atomic save of a tracked file: write a temp file, rename it over.
+	tmp := filepath.Join(repo, "b.go.tmp123456")
+	write(t, tmp, "package b // edited\n")
+	must(t, os.Rename(tmp, filepath.Join(repo, "b.go")))
+	write(t, filepath.Join(repo, "new.go"), "package n\n")
+	scratch := filepath.Join(repo, "scratch.go.8518726702714156545")
+	write(t, scratch, "x")
+	must(t, os.Remove(scratch))
+
+	var got []store.WorkspaceChange
+	for i := 0; i < 50; i++ {
+		got, _ = s.WorkspaceChanges(projID(repo), 0, time.Time{}, 100)
+		if len(got) >= 2 {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	ops := map[string]string{}
+	for _, c := range got {
+		ops[filepath.Base(c.Path)] = c.Op
+	}
+	if ops["b.go"] != "modify" || ops["new.go"] != "create" || len(ops) != 2 {
+		t.Errorf("changes: %v", ops)
+	}
+}

@@ -102,7 +102,7 @@
 "运行自检" = "Run Self-Check";
 "接入已安装的 agent？" = "Connect installed agents?";
 "接入" = "Connect";
-"将修改 Claude Code 和 Codex 的 hooks 与 MCP 配置（修改前自动备份），并注册开机自启的后台服务。之后请不要移动本应用。" = "This changes the hooks and MCP configuration of Claude Code and Codex (backed up first) and registers a background service that starts at login. Don't move this app afterwards.";
+"将为已安装的 agent 写入 hooks、扩展与 MCP 配置（修改前自动备份），并注册开机自启的后台服务。已接入的 agent 不受影响。之后请不要移动本应用。" = "This writes hooks, extensions, and MCP configuration for installed agents (backed up first) and registers a background service that starts at login. Agents already connected are unaffected. Don't move this app afterwards.";
 "断开所有 agent？" = "Disconnect all agents?";
 "断开并还原" = "Disconnect and Restore";
 "将移除 hooks、MCP 配置、软链接和后台服务。用户改动过的文件会保留，已索引的数据不会删除。" = "This removes hooks, MCP configuration, symlinks, and the background service. Files you edited are kept, and indexed data isn't deleted.";
@@ -268,6 +268,8 @@
 "自动接收其他 agent 的进展" = "Receive other agents' progress automatically";
 "让 DeepSeek Harness 自动接收其他 agent 的进展？" = "Let DeepSeek Harness receive other agents' progress automatically?";
 "注入的进展会写进 DeepSeek Harness 的会话日志。它默认会把会话日志上传给 DeepSeek，请先在它的 Settings → General 里关闭 “Upload Session Log when using the official model API”。" = "Injected progress is written to DeepSeek Harness's session logs, which it uploads to DeepSeek by default. First turn off “Upload Session Log when using the official model API” under its Settings → General.";
+"%@ 还没有接入。" = "Not connected yet: %@.";
+"接入 %@…" = "Connect %@…";
 "界面语言" = "Interface language";
 "跟随系统" = "Match System";
 "简体中文" = "简体中文";

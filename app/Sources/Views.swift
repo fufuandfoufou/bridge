@@ -133,7 +133,7 @@ struct OverviewView: View {
             Button("取消", role: .cancel) {}
             Button("接入") { Task { await runCLI(["init", "--yes"]) } }
         } message: {
-            Text("将修改 Claude Code 和 Codex 的 hooks 与 MCP 配置（修改前自动备份），并注册开机自启的后台服务。之后请不要移动本应用。")
+            Text("将为已安装的 agent 写入 hooks、扩展与 MCP 配置（修改前自动备份），并注册开机自启的后台服务。已接入的 agent 不受影响。之后请不要移动本应用。")
         }
         .confirmationDialog("断开所有 agent？", isPresented: $confirmRemove) {
             Button("取消", role: .cancel) {}
@@ -150,10 +150,18 @@ struct OverviewView: View {
                 Text(model.status?.daemon == true ? "后台同步运行中" : "后台同步未运行").font(.headline)
                 Text(model.connected ? "已接入，新会话和进展会自动同步。" : "接入后，agent 之间才会自动同步进展和记忆。")
                     .font(.callout).foregroundStyle(.secondary)
+                if model.connected && !model.unconnected.isEmpty {
+                    Text(tr("%@ 还没有接入。", model.unconnected.map(\.displayName).joined(separator: "、")))
+                        .font(.callout).foregroundStyle(.orange)
+                }
             }
             Spacer()
             if busy { ProgressView().controlSize(.small) }
             if model.connected {
+                if !model.unconnected.isEmpty {
+                    Button(tr("接入 %@…", model.unconnected.map(\.displayName).joined(separator: "、"))) { confirmConnect = true }
+                        .buttonStyle(.borderedProminent).disabled(busy)
+                }
                 Button("断开…") { confirmRemove = true }.disabled(busy)
             } else {
                 Button("接入 agent…") { confirmConnect = true }.buttonStyle(.borderedProminent).disabled(busy)
