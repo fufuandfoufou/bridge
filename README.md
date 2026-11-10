@@ -135,7 +135,6 @@ go build -o bin/bridge ./cmd/bridge
 
 - 迁移不是字节级副本：推理内容不迁移，无法映射的工具转为文本，超长会话会压缩。
 - 追加的历史要重新打开会话才生效，正在运行的客户端不会感知。Codex 没有运行状态登记，只能按文件最近是否变化来判断是否在使用。
-- Codex 的原生分页会话暂不支持追加更新，只能生成新副本。
 - 文件认领可设为提醒或拦截，只约束接入的 agent 的编辑工具；Shell 命令、手工编辑不受保护，后台离线时不拦截。
 - 后台会监听最近两小时活跃的 git 项目目录（跳过隐藏目录、node_modules、vendor、dist、build、target 等），把其他来源的文件改动告诉 agent。来源只是推测：附近有某个 agent 的编辑工具改过同一文件时标为“可能来自”，否则标为未知。
 - MCP 配置同步默认关闭，开启方式是 `bridge config` 或设置页里的 `sync.mcp_configs`。源文件是 `~/.config/bridge/mcp.toml`（全局）和项目的 `.agents/mcp.toml`，按条目写入 `~/.claude.json`、`.mcp.json` 和 Codex 的 `config.toml`。已有的同名配置、被手工改过的条目不会被覆盖。Codex 只读取已信任项目里的 `.codex/config.toml`，也不支持 SSE 传输。详见 [docs/mcp-sync.md](docs/mcp-sync.md)。
