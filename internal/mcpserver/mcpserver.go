@@ -177,7 +177,7 @@ func (h *Handlers) MemorySearch(in MemorySearchIn) (MemorySearchOut, error) {
 // Serve runs the server on stdio until the client disconnects.
 func Serve(ctx context.Context, st *store.Store, cfg *config.Config, cwd string) error {
 	h := &Handlers{Store: st, Config: cfg, Project: project.Identify(cwd)}
-	s := mcp.NewServer(&mcp.Implementation{Name: "bridge", Version: "0.1.0"}, nil)
+	s := mcp.NewServer(&mcp.Implementation{Name: "bridge", Version: "0.2.0"}, nil)
 	mcp.AddTool(s, &mcp.Tool{Name: "session_list", Description: "List sessions other agents have run in this project."},
 		func(_ context.Context, _ *mcp.CallToolRequest, in SessionListIn) (*mcp.CallToolResult, SessionListOut, error) {
 			o, err := h.SessionList(in)
