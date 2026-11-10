@@ -161,6 +161,8 @@ DeepSeek Harness 支持原生迁入、迁出及已有会话的增量更新。写
 go test ./...
 ```
 
+每个 PR 都会在 GitHub Actions 上跑格式检查、静态检查、全部测试和竞态检测。`test/golden` 保存了审核过的转换结果：各 agent 的样本会话 → 统一事件 → 写给其他 agent 的原生格式和交接文档。改动转换逻辑后，运行 `go test ./test/golden -update` 更新基线，并逐行检查 diff 后再提交。
+
 验收测试位于 `test/acceptance`，全部在隔离的 HOME 中运行，不会接触真实的 agent 数据。
 
 欢迎为新的 agent 贡献适配器，先用 `bridge adapter test <id>` 跑通一致性测试。

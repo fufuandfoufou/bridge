@@ -1,0 +1,8 @@
+{"session_id":"","seq":1,"kind":"message","role":"user","content":[{"type":"text","text":"读 README 并改一个错别字，key AKIAIOSFODNN7EXAMPLE"}],"ts":"2026-11-09T10:01:00Z"}
+{"session_id":"","seq":2,"kind":"reasoning_stub","role":"assistant","ts":"2026-11-09T10:02:00Z"}
+{"session_id":"","seq":3,"kind":"tool_call","role":"assistant","tool":{"id":"call_r","canonical_name":"read_file","native_name":"read","args":{"path":"README.md"}},"ts":"2026-11-09T10:02:00Z"}
+{"session_id":"","seq":4,"kind":"tool_result","role":"tool","tool":{"id":"call_r","canonical_name":"","native_name":"read","result":"# Demo\nteh tool","status":"ok"},"ts":"2026-11-09T10:03:00Z"}
+{"session_id":"","seq":5,"kind":"tool_call","role":"assistant","tool":{"id":"call_e","canonical_name":"edit_file","native_name":"edit","args":{"new":"the","old":"teh","path":"README.md"}},"ts":"2026-11-09T10:04:00Z"}
+{"session_id":"","seq":6,"kind":"file_change","role":"assistant","file":{"path":"README.md","op":"modify","diff":"-teh\n+the"},"ts":"2026-11-09T10:04:00Z"}
+{"session_id":"","seq":7,"kind":"tool_result","role":"tool","tool":{"id":"call_e","canonical_name":"","native_name":"edit","result":"edited","status":"ok"},"ts":"2026-11-09T10:05:00Z"}
+{"session_id":"","seq":8,"kind":"message","role":"assistant","content":[{"type":"text","text":"已修正。"}],"ts":"2026-11-09T10:06:00Z"}

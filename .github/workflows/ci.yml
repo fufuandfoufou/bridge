@@ -1,0 +1,58 @@
+# Runs on every pull request and on pushes to main, so nothing is merged
+# without the full test suite, including the golden files in test/golden.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Formatting
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "::error::These files need gofmt:"; echo "$unformatted"; exit 1
+          fi
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test ./... -count=1
+
+      - name: Test with the race detector
+        run: go test -race ./... -count=1
+
+      - name: Golden files are current
+        run: |
+          go test ./test/golden -update -count=1
+          if ! git diff --quiet -- test/golden; then
+            echo "::error::Golden files are out of date. Run go test ./test/golden -update, review the diff and commit it."
+            git diff --stat -- test/golden; exit 1
+          fi
+
+      - name: Linux build
+        run: GOOS=linux GOARCH=amd64 go build ./...
+
+      - name: Type-check the app
+        run: |
+          swiftc -typecheck -swift-version 5 -parse-as-library -sdk "$(xcrun --show-sdk-path)" \
+            -target arm64-apple-macos13.0 app/Sources/*.swift

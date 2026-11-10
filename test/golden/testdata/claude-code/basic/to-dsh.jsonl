@@ -1,0 +1,29 @@
+{"createdAt":1794312000000,"cwd":"/work/demo","delegationDepth":0,"id":"golden-target","isSeeded":false,"type":"session","version":4}
+{"data":{"messageSeqs":[],"source":{"kind":"user"},"title":"golden claude-code"},"seq":0,"time":1794312000000,"type":"session/title"}
+{"data":{"turn":1},"seq":1,"time":1794312000000,"type":"turn/start"}
+{"data":{"step":1,"turn":1},"seq":2,"time":1794312000000,"type":"step/start"}
+{"data":{"message":{"content":[],"id":"<uuid-1>","role":"system","source":{"kind":"system-prompt"}},"step":1,"turn":1},"seq":3,"surfaceOp":"append","time":1794312000000,"type":"system/message"}
+{"data":{"content":[{"text":"[bridge 交接] 这个会话从 claude-code 迁移而来，迁移时间 2026-11-10T12:00:00Z。\n以下工具调用来自其他 agent，你当前可用的工具可能不同，请不要假定它们可以直接调用。\n已省略 1 段推理内容。","type":"text"}],"id":"<uuid-2>","role":"user","source":{"kind":"user"}},"seq":4,"surfaceOp":"append","time":1794312000000,"type":"user/message"}
+{"data":{"step":1,"turn":1},"seq":5,"time":1794312000000,"type":"step/end"}
+{"data":{"reason":{"kind":"completed"},"turn":1},"seq":6,"time":1794312000000,"type":"turn/end"}
+{"data":{"turn":2},"seq":7,"time":1794312000000,"type":"turn/start"}
+{"data":{"step":1,"turn":2},"seq":8,"time":1794312000000,"type":"step/start"}
+{"data":{"content":[{"text":"帮我把 config.go 里的超时改成 30 秒，key 是 [REDACTED:aws_access_key]","type":"text"}],"id":"<uuid-3>","role":"user","source":{"kind":"user"}},"seq":9,"surfaceOp":"append","time":1794312000000,"type":"user/message"}
+{"data":{"message":{"content":[{"text":"先看一下文件。","type":"text"},{"arguments":"{\"file_path\":\"/work/demo/config.go\"}","id":"<uuid-4>","name":"read","type":"tool-call"}],"id":"<uuid-5>","role":"assistant","source":{"kind":"model","model":"imported","provider":"bridge"}},"step":1,"stream":[],"turn":2},"seq":10,"surfaceOp":"append","time":1794312000000,"type":"assistant/message"}
+{"data":{"arguments":"{\"file_path\":\"/work/demo/config.go\"}","callId":"<uuid-4>","name":"read","step":1,"turn":2},"seq":11,"time":1794312000000,"type":"tool/call"}
+{"data":{"message":{"content":[{"text":"timeout := 10 * time.Second","type":"text"}],"id":"<uuid-6>","isError":false,"role":"tool","source":{"callId":"<uuid-4>","kind":"tool"},"toolCallId":"<uuid-4>"},"step":1,"turn":2},"seq":12,"surfaceOp":"append","time":1794312000000,"type":"tool/result"}
+{"data":{"step":1,"turn":2},"seq":13,"time":1794312000000,"type":"step/end"}
+{"data":{"step":2,"turn":2},"seq":14,"time":1794312000000,"type":"step/start"}
+{"data":{"message":{"content":[{"arguments":"{\"file_path\":\"/work/demo/config.go\",\"new_string\":\"30 * time.Second\",\"old_string\":\"10 * time.Second\"}","id":"<uuid-7>","name":"edit","type":"tool-call"}],"id":"<uuid-8>","role":"assistant","source":{"kind":"model","model":"imported","provider":"bridge"}},"step":2,"stream":[],"turn":2},"seq":15,"surfaceOp":"append","time":1794312000000,"type":"assistant/message"}
+{"data":{"arguments":"{\"file_path\":\"/work/demo/config.go\",\"new_string\":\"30 * time.Second\",\"old_string\":\"10 * time.Second\"}","callId":"<uuid-7>","name":"edit","step":2,"turn":2},"seq":16,"time":1794312000000,"type":"tool/call"}
+{"data":{"message":{"content":[{"text":"ok","type":"text"}],"id":"<uuid-9>","isError":false,"role":"tool","source":{"callId":"<uuid-7>","kind":"tool"},"toolCallId":"<uuid-7>"},"step":2,"turn":2},"seq":17,"surfaceOp":"append","time":1794312000000,"type":"tool/result"}
+{"data":{"step":2,"turn":2},"seq":18,"time":1794312000000,"type":"step/end"}
+{"data":{"step":3,"turn":2},"seq":19,"time":1794312000000,"type":"step/start"}
+{"data":{"message":{"content":[{"arguments":"{\"command\":\"go test ./...\",\"description\":\"run tests\"}","id":"<uuid-10>","name":"bash","type":"tool-call"}],"id":"<uuid-11>","role":"assistant","source":{"kind":"model","model":"imported","provider":"bridge"}},"step":3,"stream":[],"turn":2},"seq":20,"surfaceOp":"append","time":1794312000000,"type":"assistant/message"}
+{"data":{"arguments":"{\"command\":\"go test ./...\",\"description\":\"run tests\"}","callId":"<uuid-10>","name":"bash","step":3,"turn":2},"seq":21,"time":1794312000000,"type":"tool/call"}
+{"data":{"message":{"content":[{"text":"ok  demo 0.2s","type":"text"}],"id":"<uuid-12>","isError":false,"role":"tool","source":{"callId":"<uuid-10>","kind":"tool"},"toolCallId":"<uuid-10>"},"step":3,"turn":2},"seq":22,"surfaceOp":"append","time":1794312000000,"type":"tool/result"}
+{"data":{"step":3,"turn":2},"seq":23,"time":1794312000000,"type":"step/end"}
+{"data":{"step":4,"turn":2},"seq":24,"time":1794312000000,"type":"step/start"}
+{"data":{"message":{"content":[{"text":"（在 claude-code 中调用了 mcp__docs__search：{\"args\":{\"query\":\"timeout\"},\"server\":\"docs\",\"tool\":\"search\"}，结果：no results）","type":"text"},{"text":"已改成 30 秒，测试通过。","type":"text"}],"id":"<uuid-13>","role":"assistant","source":{"kind":"model","model":"imported","provider":"bridge"}},"step":4,"stream":[],"turn":2},"seq":25,"surfaceOp":"append","time":1794312000000,"type":"assistant/message"}
+{"data":{"step":4,"turn":2},"seq":26,"time":1794312000000,"type":"step/end"}
+{"data":{"reason":{"kind":"completed"},"turn":2},"seq":27,"time":1794312000000,"type":"turn/end"}

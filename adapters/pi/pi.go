@@ -504,6 +504,7 @@ type writer struct {
 	provider string
 	model    string
 	api      string
+	calls    map[string]string // tool call ID -> pi tool name, for results
 }
 
 func newWriter(parent string, now time.Time, provider, mdl string) *writer {
@@ -572,9 +573,18 @@ func (w *writer) events(events []model.Event) error {
 			}
 			var obj any
 			_ = json.Unmarshal(args, &obj)
+			if w.calls == nil {
+				w.calls = map[string]string{}
+			}
+			w.calls[e.Tool.ID] = name
 			err = w.assistant(e.TS, []map[string]any{{"type": "toolCall", "id": e.Tool.ID, "name": name, "arguments": obj}}, "toolUse")
 		case model.KindToolResult:
-			name := e.Tool.NativeName
+			// A result carries the pi name of its call; the source agent's
+			// native name would be another agent's vocabulary.
+			name := w.calls[e.Tool.ID]
+			if name == "" {
+				name = e.Tool.NativeName
+			}
 			if name == "" {
 				name = "bash"
 			}
