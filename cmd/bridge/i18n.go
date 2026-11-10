@@ -27,6 +27,7 @@ var messagesEN = map[string]string{
 	"规则源和副本都被修改过，两边都已保留；请手工合并后再同步": "Both the source and the copy changed. Both were kept; merge them by hand, then sync.", "已把副本内容合回规则源": "Copy merged back into the source",
 	"这个 agent 不支持自动检测，只能手动启用": "This agent has no automatic check and can only be enabled by hand", "客户端未能继续探测会话": "The client couldn't continue the probe session", "客户端未能在限定时间内继续探测会话": "The client didn't continue the probe session in time", "客户端加载了探测会话，但历史内容缺失": "The client loaded the probe session, but its history is missing",
 	"缺少目标 agent": "No target agent specified", "项目记忆需要先选择项目目录": "Choose a project folder for project memories first", "记忆内容不能为空": "Memory content can't be empty", "只能编辑生效中或待审核的记忆": "Only active or pending memories can be edited", "无法确定该 agent 的版本": "Can't determine this agent's version",
+	"任务需要先选择项目目录": "Choose a project folder for the task first", "任务标题不能为空": "Task title can't be empty", "not found": "Not found",
 	"数据库可打开": "Database opens", "数据库权限为 0600": "Database permissions are 0600", "守护进程在线": "Daemon is online",
 }
 

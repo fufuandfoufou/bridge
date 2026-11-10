@@ -483,10 +483,6 @@ func TestLIVE05_MCPScope(t *testing.T) {
 	})
 }
 
-func TestLIVE06_Attribution(t *testing.T) {
-	t.Skip("工作区监听未实现，人工修改不会被归因；归因标记（推测/未知）也不存在，待该功能实现后再测")
-}
-
 type stubExtractor struct {
 	reply  string
 	err    error

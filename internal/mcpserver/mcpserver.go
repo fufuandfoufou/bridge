@@ -193,5 +193,6 @@ func Serve(ctx context.Context, st *store.Store, cfg *config.Config, cwd string)
 			o, err := h.MemorySearch(in)
 			return nil, o, err
 		})
+	addTaskTools(s, h)
 	return s.Run(ctx, &mcp.StdioTransport{})
 }

@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 enum Page: String, CaseIterable, Identifiable {
-    case overview = "概览", sessions = "会话迁移", files = "规则与 Skill", claims = "文件认领", memory = "记忆", settings = "设置"
+    case overview = "概览", sessions = "会话迁移", files = "规则与 Skill", claims = "文件认领", tasks = "任务看板", memory = "记忆", settings = "设置"
     var id: String { rawValue }
     var icon: String {
         switch self {
@@ -10,6 +10,7 @@ enum Page: String, CaseIterable, Identifiable {
         case .sessions: return "arrow.left.arrow.right"
         case .files: return "doc.on.doc"
         case .claims: return "person.badge.key"
+        case .tasks: return "checklist"
         case .memory: return "brain"
         case .settings: return "gearshape"
         }
@@ -32,6 +33,7 @@ struct RootView: View {
             case .sessions: SessionsView()
             case .files: FilesView()
             case .claims: ClaimsView()
+            case .tasks: TasksView()
             case .memory: MemoryView()
             case .settings: SettingsView()
             }

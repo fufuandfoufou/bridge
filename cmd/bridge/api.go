@@ -392,6 +392,51 @@ func apiCmd() *cobra.Command {
 		}
 		return map[string]any{"claims": claims}, nil
 	})
+	type taskRow struct {
+		store.Task
+		Project string `json:"project"`
+	}
+	tl := dirFlag(add("tasks", cobra.NoArgs, withStore(func(_ context.Context, st *store.Store, _ *config.Config, _ []string) (any, error) {
+		pid := ""
+		if dir != "" {
+			pid = project.Identify(dir).ID
+		}
+		tasks, err := st.ListTasks(pid, force)
+		if err != nil {
+			return nil, err
+		}
+		projects, err := st.ListProjects()
+		if err != nil {
+			return nil, err
+		}
+		paths := map[string]string{}
+		for _, p := range projects {
+			paths[p.ID] = p.Path
+		}
+		rows := []taskRow{}
+		for _, t := range tasks {
+			rows = append(rows, taskRow{Task: t, Project: paths[t.ProjectID]})
+		}
+		return map[string]any{"tasks": rows}, nil
+	})))
+	tl.Flags().BoolVar(&force, "all", false, "include finished tasks")
+	ta := dirFlag(add("task-add <title>", cobra.ExactArgs(1), withStore(func(_ context.Context, st *store.Store, _ *config.Config, a []string) (any, error) {
+		if dir == "" {
+			return nil, errors.New("任务需要先选择项目目录")
+		}
+		p := project.Identify(dir)
+		if err := st.UpsertProject(p); err != nil {
+			return nil, err
+		}
+		return st.AddTask(p.ID, a[0], value)
+	})))
+	ta.Flags().StringVar(&value, "detail", "", "details")
+	add("task-reopen <id>", cobra.ExactArgs(1), withStore(func(_ context.Context, st *store.Store, _ *config.Config, a []string) (any, error) {
+		return st.ReopenTask(a[0])
+	}))
+	add("task-delete <id>", cobra.ExactArgs(1), withStore(func(_ context.Context, st *store.Store, _ *config.Config, a []string) (any, error) {
+		return nil, st.DeleteTask(a[0])
+	}))
 	add("resume", cobra.NoArgs, func(context.Context, []string) (any, error) { return nil, fsutil.SetPaused(false) })
 
 	add("ensure-daemon", cobra.NoArgs, func(context.Context, []string) (any, error) {

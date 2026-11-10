@@ -369,6 +369,7 @@ func (d *Daemon) Run(ctx context.Context) error {
 	go d.extractLoop(ctx)
 	go d.fileSyncLoop(ctx)
 	go d.versionLoop(ctx)
+	go d.watchWorkspaces(ctx)
 	<-ctx.Done()
 	return nil
 }

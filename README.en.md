@@ -61,7 +61,8 @@ Backups before writing, temp file plus atomic rename, read-back verification, an
 | Area | Capabilities |
 | --- | --- |
 | Session migration | Index and filter sessions, native migration, tool mapping, trimming long sessions, handoff-document fallback, two-way updates after migrating |
-| Live collaboration | Incremental collection, hook-injected progress, MCP queries (`session_list`, `session_events`, `memory_search`), file claim warnings |
+| Live collaboration | Incremental collection, hook-injected progress, MCP queries (`session_list`, `session_events`, `memory_search`), file claim warnings, notes on other workspace changes |
+| Task board | Shared per-project tasks via `task_add` / `task_claim` / `task_update` / `task_done`; claims are atomic and only the holder can update a task; new sessions see unfinished tasks |
 | Memory | Global preferences and project memory, optional automatic extraction, supersession, review, forget without re-extraction |
 | File sync | One source for rules and skills, symlinks or generated copies, drift detection, adopt or overwrite |
 | Configuration | Four merged layers, per-category and per-agent switches, sync direction, `why` explains where a value came from |
@@ -113,6 +114,7 @@ Build the desktop app:
 | `plan` / `sync` | Preview / apply rule and skill sync |
 | `why <path-or-memory-id>` | Explain a sync result and the config behind it |
 | `memory list/review/add/edit/forget/extract` | Manage memory |
+| `task list/add/reopen/delete` | Manage the current project's task board |
 | `adapter list/trust/test` | External adapters and conformance tests |
 
 Any command accepts `--set key=value`. Configuration has four layers: built-in defaults → `~/.config/bridge/config.toml` → `<repo>/.bridge.toml` → `--set`.
@@ -134,7 +136,8 @@ This is an early project. Please try it on sessions you don't depend on first.
 - Appended history takes effect when a session is reopened; a running client won't notice it. Codex has no registry of running threads, so "in use" is inferred from recent file changes.
 - Codex's native paginated sessions can't be appended to yet, only copied into a new session.
 - File claims can warn or block, but only cover the edit tools of connected agents: shell commands and manual edits aren't protected, and nothing is blocked while the daemon is offline.
-- Task board, worktree mode, MCP config sync, and history import aren't implemented.
+- The daemon watches the folders of git projects active in the last two hours (skipping hidden folders, node_modules, vendor, dist, build, target and similar) and tells agents about file changes from other sources. The source is only a guess: a change is marked "probably from" an agent when that agent's edit tool touched the same file around then, and unknown otherwise.
+- Worktree mode, MCP config sync, and history import aren't implemented.
 - macOS only for now.
 
 ## Docs and contributing
