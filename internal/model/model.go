@@ -106,8 +106,19 @@ func TextEvent(role, text string, ts time.Time) Event {
 // Project is identified by git remote + repository root.
 type Project struct {
 	ID        string `json:"id"`
-	Path      string `json:"path"`
+	Path      string `json:"path"` // the main checkout
 	GitRemote string `json:"git_remote,omitempty"`
+	// Worktree is the checkout the directory is in: Path itself, or a linked
+	// git worktree of the same repository. Not stored.
+	Worktree string `json:"-"`
+}
+
+// Checkout returns the root of the working tree in use.
+func (p Project) Checkout() string {
+	if p.Worktree != "" {
+		return p.Worktree
+	}
+	return p.Path
 }
 
 // Session is a conversation of one agent.
